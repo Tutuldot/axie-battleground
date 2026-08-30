@@ -1,0 +1,212 @@
+[
+  {
+    "id": "1",
+    "name": "Axie #1",
+    "class": "Aquatic",
+    "image": "https://cdn.axieinfinity.com/avatars/egg/egg-full-transparent.png",
+    "genes": "0x20000000000003000181a09082040000000100040800800400000090086044020001000010008002000100100840450200010004186044020001001008808404"
+  },
+  {
+    "id": "2",
+    "name": "Axie #2",
+    "class": "Aquatic",
+    "image": "https://cdn.axieinfinity.com/avatars/egg/egg-full-transparent.png",
+    "genes": "0x20000000000003000181a09082040000000100040800800400000090086044020001000010008002000100100840450200010004186044020001001008808404"
+  },
+  {
+    "id": "3",
+    "name": "Axie #3",
+    "class": "Aquatic",
+    "image": "https://cdn.axieinfinity.com/avatars/egg/egg-full-transparent.png",
+    "genes": "0x20000000000003000181a09082040000000100040800800400000090086044020001000010008002000100100840450200010004186044020001001008808404"
+  },
+  {
+    "id": "4",
+    "name": "Axie #4",
+    "class": "Aquatic",
+    "image": "https://cdn.axieinfinity.com/avatars/egg/egg-full-transparent.png",
+    "genes": "0x20000000000003000181a09082040000000100040800800400000090086044020001000010008002000100100840450200010004186044020001001008808404"
+  },
+  {
+    "id": "5",
+    "name": "🏆 #5 (First Axie)",
+    "class": "Beast",
+    "image": "https://assets.axieinfinity.com/axies/5/axie/axie-full-transparent.png",
+    "genes": "0x30002c1c0c0430c000000010000082080020001000408204202000100040840c5020001000408a0c502000100080840c2040001000010004506"
+  },
+  {
+    "id": "6",
+    "name": "#6",
+    "class": "Aquatic",
+    "image": "https://assets.axieinfinity.com/axies/6/axie/axie-full-transparent.png",
+    "genes": "0x2000000000000300018000a0800800000001001410a045040001001010208104000100041800c20600010010186081060001000010a041060001001410808102"
+  },
+  {
+    "id": "7",
+    "name": "Lucky Seven",
+    "class": "Aquatic",
+    "image": "https://assets.axieinfinity.com/axies/7/axie/axie-full-transparent.png",
+    "genes": "0x200000000000020182c080c044080000000300100840430200030010082042040003000010a08206000206881820c0060003000408a0c5060002008408808502"
+  },
+  {
+    "id": "8",
+    "name": "Axie #∞",
+    "class": "Beast",
+    "image": "https://assets.axieinfinity.com/axies/8/axie/axie-full-transparent.png",
+    "genes": "0x300034180a04308000000010000086083040001000c108081020001000808804402000100140860440600010000186041020001000410204004"
+  },
+  {
+    "id": "9",
+    "name": "on9 AXIE",
+    "class": "Beast",
+    "image": "https://assets.axieinfinity.com/axies/9/axie/axie-full-transparent.png",
+    "genes": "0x2018280c080c30800000003000408008202000206801060450400030000084084040003000418a04104000200840800c0020002068010808404"
+  },
+  {
+    "id": "10",
+    "name": "🏆#10: Aqua Queen",
+    "class": "Aquatic",
+    "image": "https://assets.axieinfinity.com/axies/10/axie/axie-full-transparent.png",
+    "genes": "0x2000000000000300038140c0c210000000010010086084040001001010404204000100100860c20200010008080080020001000808a045020001001008808406"
+  },
+  {
+    "id": "11",
+    "name": "XI",
+    "class": "Beast",
+    "image": "https://assets.axieinfinity.com/axies/11/axie/axie-full-transparent.png",
+    "genes": "0x3000380c060820000000001000c082043040001000808208002000100101860c502000100001000840200010014088084020001000008a08204"
+  },
+  {
+    "id": "12",
+    "name": "The First Bug",
+    "class": "Bug",
+    "image": "https://assets.axieinfinity.com/axies/12/axie/axie-full-transparent.png",
+    "genes": "0x8000000000003000180a0c0c20c00000001000408808004000100040880850400010014186043020001001008a0450600010004100083020001001008a08106"
+  },
+  {
+    "id": "13",
+    "name": "Axie #13",
+    "class": "Plant",
+    "image": "https://assets.axieinfinity.com/axies/13/axie/axie-full-transparent.png",
+    "genes": "0x1800000000000300020120d00408000000010008080083040001000c088081020001000c080045060001000408a0800600010010084080040001000c08204204"
+  },
+  {
+    "id": "14",
+    "name": "Fourteen Fans",
+    "class": "Beast",
+    "image": "https://assets.axieinfinity.com/axies/14/axie/axie-full-transparent.png",
+    "genes": "0x300038120904008000000010000102041040001000c088082020001001410a0c20200010014184042060001000c1880c1040001000018a0c402"
+  },
+  {
+    "id": "15",
+    "name": "Bluestoise",
+    "class": "Aquatic",
+    "image": "https://assets.axieinfinity.com/axies/15/axie/axie-full-transparent.png",
+    "genes": "0x20000000000003000301c0b0800800000001001010008102000100101060850200010004104083020001001018804402000100101040c1020001000808804304"
+  },
+  {
+    "id": "16",
+    "name": "Calico",
+    "class": "Beast",
+    "image": "https://assets.axieinfinity.com/axies/16/axie/axie-full-transparent.png",
+    "genes": "0x3000001809001040000000200800840810200010000106081040002008008a0430400030010088084020003000010804104000100041060c106"
+  },
+  {
+    "id": "17",
+    "name": "#17",
+    "class": "Plant",
+    "image": "https://assets.axieinfinity.com/axies/17/axie/axie-full-transparent.png",
+    "genes": "0x1800000000000300028080008400000000010000104082040002008c08a082020001000c0800c2060001000c10604504000100041820c104000300041860c404"
+  },
+  {
+    "id": "18",
+    "name": "Axie #18",
+    "class": "Beast",
+    "image": "https://assets.axieinfinity.com/axies/18/axie/axie-full-transparent.png",
+    "genes": "0x3000100e090c310000000010010100040040001000808a08502000100000840c0020001000408404506000100081880c206000100001800c506"
+  },
+  {
+    "id": "19",
+    "name": "𝕭𝖊𝖑𝖑𝖜𝖊𝖙𝖍𝖊𝖗",
+    "class": "Beast",
+    "image": "https://assets.axieinfinity.com/axies/19/axie/axie-full-transparent.png",
+    "genes": "0x300038140c0440c0000000100080840430400010000108040020001001418a0400200010000188042060001000c102040060001000810808306"
+  },
+  {
+    "id": "20",
+    "name": "#20 Red Nemo God",
+    "class": "Aquatic",
+    "image": "https://assets.axieinfinity.com/axies/20/axie/axie-full-transparent.png",
+    "genes": "0x200000000000030001c08000821000000001000010a085040001000808004204000000900800c10600010010080045040001000c188082060001001408604206"
+  },
+  {
+    "id": "21",
+    "name": "First Winter Branch",
+    "class": "Beast",
+    "image": "https://assets.axieinfinity.com/axies/21/axie/axie-full-transparent.png",
+    "genes": "0x30001814050831000000001000c084043040002060010408002000100000860c104000000800800c40600010014106043060001001008204504"
+  },
+  {
+    "id": "22",
+    "name": "Axie #22",
+    "class": "Aquatic",
+    "image": "https://assets.axieinfinity.com/axies/22/axie/axie-full-transparent.png",
+    "genes": "0x200000000000030002010000440000000001000c10008404000100141000800200010010184045060001000c1880c4060001000c1860c502000100101860c202"
+  },
+  {
+    "id": "23",
+    "name": "Axie #23",
+    "class": "Plant",
+    "image": "https://assets.axieinfinity.com/axies/23/axie/axie-full-transparent.png",
+    "genes": "0x180000000000030001c040b0c100000000010004104042020001000c10a04204000100141840c30400010010100044040001000c1080c402000100000820c106"
+  },
+  {
+    "id": "24",
+    "name": "White Rabbit",
+    "class": "Aquatic",
+    "image": "https://assets.axieinfinity.com/axies/24/axie/axie-full-transparent.png",
+    "genes": "0x200000000000030002c140e00200000000030004106044020001001008004202000100101860c504000100101860800600020094084081020001001408208204"
+  },
+  {
+    "id": "25",
+    "name": "Axie #25",
+    "class": "Aquatic",
+    "image": "https://assets.axieinfinity.com/axies/25/axie/axie-full-transparent.png",
+    "genes": "0x200000000000030001c000a084040000000100080800410400010010100082040001001018408402000100041880420200010014108043060001001418608402"
+  },
+  {
+    "id": "26",
+    "name": "Axie #26",
+    "class": "Beast",
+    "image": "https://assets.axieinfinity.com/axies/26/axie/axie-full-transparent.png",
+    "genes": "0x3000141002000040000000100001000820200010008080045020001000008604506000100041840c406000100001840c4060001000c1000c106"
+  },
+  {
+    "id": "27",
+    "name": "First Hasagi",
+    "class": "Beast",
+    "image": "https://assets.axieinfinity.com/axies/27/axie/axie-full-transparent.png",
+    "genes": "0x30001c0c040c300000000030000082084040002069010808304000300101880c2060003001408a04502000200800880c2020003000018a0c502"
+  },
+  {
+    "id": "28",
+    "name": "Axie #28",
+    "class": "Plant",
+    "image": "https://assets.axieinfinity.com/axies/28/axie/axie-full-transparent.png",
+    "genes": "0x180000000000030002c1c001011000000001001408a085040001000c08a041020001001408408004000100100840c1020001000c088043040001000808608506"
+  },
+  {
+    "id": "29",
+    "name": "Ava",
+    "class": "Plant",
+    "image": "https://assets.axieinfinity.com/axies/29/axie/axie-full-transparent.png",
+    "genes": "0x1800000000000300008100e1041000000002008c0860800400010010086041020001000c0820c3040003000c080044020001000c108085020002008c08208404"
+  },
+  {
+    "id": "30",
+    "name": "Chaddy Daddy",
+    "class": "Aquatic",
+    "image": "https://assets.axieinfinity.com/axies/30/axie/axie-full-transparent.png",
+    "genes": "0x200000000000030003810070030000000001000410004302000100080800840400010014186084020001000018a083040001001008404504000100101020c106"
+  }
+]
