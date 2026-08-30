@@ -1,4 +1,4 @@
-import axiesLineupData from './axies-1-30.json';
+import axiesLineupData from './axies-31-60.json';
 
 export interface SampleAxie {
   id: string;

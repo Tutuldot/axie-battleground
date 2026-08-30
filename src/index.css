@@ -318,8 +318,75 @@ body {
   margin-top: 0.2rem;
 }
 
+/* Created Teams Selection Bar */
+.created-teams-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding: 0.25rem 0;
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+.created-team-card-pill {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font-heading);
+  white-space: nowrap;
+}
+
+.created-team-card-pill:hover, .created-team-card-pill.active {
+  border-color: var(--accent-cyan);
+  background: rgba(0, 240, 255, 0.12);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+}
+
+.created-team-card-pill.active {
+  border-width: 1.5px;
+}
+
+.created-team-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.created-team-badge {
+  font-size: 0.72rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 10px;
+  background: rgba(0, 240, 255, 0.2);
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+
+.btn-edit-team-pill {
+  background: transparent;
+  border: 1px solid rgba(255, 183, 3, 0.3);
+  color: var(--accent-gold);
+  font-weight: 700;
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.btn-edit-team-pill:hover {
+  background: rgba(255, 183, 3, 0.2);
+  border-color: var(--accent-gold);
+}
+
 /* ==========================================================================
-   AXIE DIRECTORY STATIC LOOKS CARDS (100% VISIBLE, NOT ZOOMED)
+   AXIE DIRECTORY STATIC LOOKS CARDS
    ========================================================================== */
 .axies-grid {
   display: grid;
@@ -396,6 +463,838 @@ body {
   background: rgba(7, 10, 18, 0.5);
   padding: 0.5rem 0.65rem;
   border-radius: 8px;
+}
+
+/* ==========================================================================
+   TEAM BUILDER 3-COLUMN LAYOUT (DEFENSE GREEN, OFFENSE RED, NEUTRAL BLUE)
+   ========================================================================== */
+.team-groupings-layout {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  width: 100%;
+  align-items: start;
+}
+
+.role-column {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1.5px solid var(--border-color);
+  border-radius: 16px;
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: 480px;
+  transition: border-color 0.3s;
+}
+
+.role-column.role-defense {
+  border-color: rgba(0, 230, 118, 0.35);
+  box-shadow: inset 0 0 20px rgba(0, 230, 118, 0.05);
+}
+.role-column.role-defense:hover {
+  border-color: #00e676;
+  box-shadow: inset 0 0 25px rgba(0, 230, 118, 0.1), 0 8px 24px rgba(0, 230, 118, 0.15);
+}
+
+.role-column.role-offense {
+  border-color: rgba(255, 82, 82, 0.35);
+  box-shadow: inset 0 0 20px rgba(255, 82, 82, 0.05);
+}
+.role-column.role-offense:hover {
+  border-color: #ff5252;
+  box-shadow: inset 0 0 25px rgba(255, 82, 82, 0.1), 0 8px 24px rgba(255, 82, 82, 0.15);
+}
+
+.role-column.role-neutral {
+  border-color: rgba(0, 240, 255, 0.35);
+  box-shadow: inset 0 0 20px rgba(0, 240, 255, 0.05);
+}
+.role-column.role-neutral:hover {
+  border-color: #00f0ff;
+  box-shadow: inset 0 0 25px rgba(0, 240, 255, 0.1), 0 8px 24px rgba(0, 240, 255, 0.15);
+}
+
+.column-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.column-header .role-icon {
+  font-size: 1.2rem;
+}
+
+.column-header .role-name {
+  font-family: var(--font-heading);
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+}
+
+.role-count-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.1rem 0.45rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.column-header .role-desc {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.squad-role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 200px;
+}
+
+.squad-summary-pill {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid var(--border-color);
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* Squad Axie Cards - STRICT UNIFORM LAYOUT */
+.squad-axie-card {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.55rem 0.75rem;
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  align-items: center;
+  gap: 0.65rem;
+  height: 74px;
+  min-height: 74px;
+  max-height: 74px;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.squad-axie-card:hover {
+  border-color: var(--accent-cyan);
+  background: rgba(30, 41, 59, 0.85);
+  transform: translateX(3px);
+}
+
+.squad-portrait-box {
+  width: 52px;
+  height: 48px;
+  border-radius: 8px;
+  background: radial-gradient(circle at center, rgba(30, 41, 59, 0.8) 0%, rgba(7, 10, 18, 0.9) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.squad-portrait-img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
+}
+
+.squad-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.squad-axie-name {
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.squad-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.squad-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.role-assign-select {
+  background: rgba(9, 13, 22, 0.85);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.3rem 0.4rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+}
+
+.role-assign-select:hover {
+  border-color: var(--accent-cyan);
+}
+
+.btn-inspect-squad {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.72rem;
+  border-radius: 6px;
+  border: 1px solid var(--accent-cyan);
+  color: var(--accent-cyan);
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.btn-inspect-squad:hover {
+  background: rgba(0, 240, 255, 0.15);
+}
+
+.btn-remove-squad {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 82, 82, 0.4);
+  color: #ff5252;
+  background: rgba(255, 82, 82, 0.12);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+  transition: all 0.2s;
+}
+
+.btn-remove-squad:hover {
+  background: rgba(255, 82, 82, 0.35);
+  border-color: #ff5252;
+  transform: scale(1.05);
+}
+
+/* Empty slot placeholder */
+.squad-empty-slot {
+  height: 74px;
+  border: 1.5px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: rgba(15, 23, 42, 0.2);
+}
+
+.squad-empty-slot:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  background: rgba(0, 240, 255, 0.05);
+}
+
+/* ==========================================================================
+   NO-SCROLL MOBILE-COMPATIBLE CREATE / EDIT TEAM MODAL
+   ========================================================================== */
+.create-team-modal-container {
+  max-width: 1040px;
+  width: 95vw;
+  max-height: 88vh;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  overflow: hidden; /* NO OUTER SCROLLER */
+  box-sizing: border-box;
+}
+
+.create-team-modal-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+
+.modal-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-right: 2.2rem; /* space for close button */
+}
+
+.modal-main-title {
+  font-family: var(--font-heading);
+  color: var(--accent-cyan);
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.modal-counter-badge {
+  background: rgba(0, 240, 255, 0.15);
+  color: var(--accent-cyan);
+  font-size: 0.8rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.modal-name-role-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.team-name-input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 200px;
+}
+
+.team-name-label {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.team-name-input {
+  max-width: 240px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.82rem;
+  height: 32px;
+}
+
+.modal-role-counters {
+  display: flex;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+}
+
+.badge-def { background: rgba(0, 230, 118, 0.15); color: #00e676; border: 1px solid rgba(0, 230, 118, 0.3); }
+.badge-off { background: rgba(255, 82, 82, 0.15); color: #ff5252; border: 1px solid rgba(255, 82, 82, 0.3); }
+.badge-neu { background: rgba(0, 240, 255, 0.15); color: #00f0ff; border: 1px solid rgba(0, 240, 255, 0.3); }
+
+/* Mobile View Switcher (Tabs) */
+.modal-view-switcher {
+  display: none; /* hidden on wide desktop, shown on mobile */
+  width: 100%;
+  gap: 0.35rem;
+  margin-top: 0.2rem;
+}
+
+.modal-tab-btn {
+  flex: 1;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal-tab-btn.active {
+  background: rgba(0, 240, 255, 0.18);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+}
+
+/* Modal Body Layout */
+.create-team-body-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 0.85rem;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.create-team-squads-panel {
+  display: flex;
+  flex-direction: column;
+  background: rgba(7, 10, 18, 0.6);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.65rem;
+  gap: 0.4rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.panel-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.panel-section-title {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* Mobile Role Filter Bar */
+.mobile-role-selector {
+  display: none; /* activated on mobile */
+  gap: 0.25rem;
+}
+
+.mobile-role-btn {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mobile-role-btn.active {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  background: rgba(0, 240, 255, 0.15);
+}
+
+.create-team-3-cols {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.45rem;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mini-role-col {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.45rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.mini-role-col.role-defense { border-color: rgba(0, 230, 118, 0.4); }
+.mini-role-col.role-offense { border-color: rgba(255, 82, 82, 0.4); }
+.mini-role-col.role-neutral { border-color: rgba(0, 240, 255, 0.4); }
+
+.mini-role-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-heading);
+  font-size: 0.72rem;
+  font-weight: 800;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.25rem;
+}
+
+.count-badge-def { background: rgba(0, 230, 118, 0.2); color: #00e676; }
+.count-badge-off { background: rgba(255, 82, 82, 0.2); color: #ff5252; }
+.count-badge-neu { background: rgba(0, 240, 255, 0.2); color: #00f0ff; }
+
+.mini-role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.15rem;
+}
+
+/* Compact Squad Item with Looks */
+.mini-squad-item {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.25rem 0.35rem;
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center;
+  gap: 0.35rem;
+  height: 38px;
+  min-height: 38px;
+  box-sizing: border-box;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.mini-squad-item:hover {
+  border-color: var(--accent-cyan);
+}
+
+.mini-item-thumb {
+  width: 32px;
+  height: 28px;
+  border-radius: 4px;
+  background: radial-gradient(circle at center, rgba(30, 41, 59, 0.8) 0%, rgba(7, 10, 18, 0.9) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mini-item-thumb img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.mini-item-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.mini-item-name {
+  font-weight: 700;
+  font-size: 0.72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+}
+
+.btn-remove-role {
+  background: rgba(255, 82, 82, 0.15);
+  border: 1px solid rgba(255, 82, 82, 0.4);
+  color: #ff5252;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 0.7rem;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.btn-remove-role:hover {
+  background: rgba(255, 82, 82, 0.45);
+  transform: scale(1.1);
+}
+
+.mobile-add-more-wrapper {
+  display: none;
+}
+
+/* Modal Right Panel: Inventory Picker */
+.create-team-inventory-panel {
+  display: flex;
+  flex-direction: column;
+  background: rgba(7, 10, 18, 0.6);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.65rem;
+  gap: 0.35rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.inventory-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.inventory-pagination-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.btn-page-step {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: rgba(30, 41, 59, 0.8);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.65rem;
+}
+
+.btn-page-step:hover:not(:disabled) {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+.btn-page-step:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.inv-page-indicator {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  min-width: 28px;
+  text-align: center;
+}
+
+.inventory-class-filter-bar {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  padding-bottom: 0.1rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.class-filter-chip {
+  padding: 0.15rem 0.4rem;
+  border-radius: 10px;
+  font-size: 0.68rem;
+  border: 1px solid var(--border-color);
+  background: rgba(15, 23, 42, 0.8);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.class-filter-chip.active {
+  background: rgba(0, 240, 255, 0.18);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+
+.create-team-picker-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Compact Picker Card with Looks */
+.picker-axie-item {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.35rem 0.45rem;
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  align-items: center;
+  gap: 0.4rem;
+  height: 48px;
+  min-height: 48px;
+  box-sizing: border-box;
+  transition: all 0.2s;
+  overflow: hidden;
+}
+
+.picker-axie-item:hover {
+  border-color: var(--accent-cyan);
+  background: rgba(30, 41, 59, 0.8);
+}
+
+.picker-axie-item.assigned {
+  background: rgba(15, 23, 42, 0.5);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.picker-thumb {
+  width: 36px;
+  height: 32px;
+  border-radius: 5px;
+  background: radial-gradient(circle at center, rgba(30, 41, 59, 0.8) 0%, rgba(7, 10, 18, 0.9) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.picker-thumb img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.picker-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.05rem;
+}
+
+.picker-name {
+  font-weight: 700;
+  font-size: 0.74rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+}
+
+.picker-stats {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.picker-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.role-assigned-indicator {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.role-assigned-indicator.role-defense { background: rgba(0, 230, 118, 0.2); color: #00e676; }
+.role-assigned-indicator.role-offense { background: rgba(255, 82, 82, 0.2); color: #ff5252; }
+.role-assigned-indicator.role-neutral { background: rgba(0, 240, 255, 0.2); color: #00f0ff; }
+
+.btn-picker-remove {
+  background: rgba(255, 82, 82, 0.15);
+  border: 1px solid rgba(255, 82, 82, 0.4);
+  color: #ff5252;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 0.68rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-picker-remove:hover {
+  background: rgba(255, 82, 82, 0.35);
+}
+
+.picker-add-btns {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.btn-add-opt {
+  padding: 0.2rem 0.35rem;
+  font-size: 0.68rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: rgba(30, 41, 59, 0.8);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.btn-add-opt:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.btn-add-opt.opt-def:not(:disabled):hover {
+  background: #00e676;
+  color: #070a12;
+  border-color: #00e676;
+}
+
+.btn-add-opt.opt-off:not(:disabled):hover {
+  background: #ff5252;
+  color: #fff;
+  border-color: #ff5252;
+}
+
+.btn-add-opt.opt-neu:not(:disabled):hover {
+  background: #00f0ff;
+  color: #070a12;
+  border-color: #00f0ff;
+}
+
+.create-team-modal-footer {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.modal-footer-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
 }
 
 /* ==========================================================================
@@ -865,7 +1764,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: 0.5rem;
+  box-sizing: border-box;
 }
 
 .card-modal-content {
@@ -885,15 +1785,15 @@ body {
 /* FIX X BUTTON CLICKABILITY */
 .card-modal-close {
   position: absolute;
-  top: 0.85rem;
-  right: 0.85rem;
+  top: 0.65rem;
+  right: 0.65rem;
   background: rgba(255, 255, 255, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.3);
   color: #ffffff;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 700;
   cursor: pointer;
   z-index: 9999;
@@ -909,7 +1809,7 @@ body {
   transform: scale(1.1);
 }
 
-/* Lightbox Inspector Grid - NO SCROLLBAR FOR CARDS, FIT 100% ON SCREEN */
+/* Lightbox Inspector Grid */
 .axie-inspector-container {
   background: rgba(15, 23, 42, 0.96);
   backdrop-filter: blur(20px);
@@ -940,9 +1840,43 @@ body {
 }
 
 /* ==========================================================================
-   MOBILE RESPONSIVENESS (<1024px & <768px)
+   RESPONSIVE LAYOUT (<900px & Mobile)
    ========================================================================== */
+@media (max-width: 900px) {
+  .modal-view-switcher {
+    display: flex !important;
+  }
+  .create-team-body-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .create-team-modal-container {
+    width: 98vw !important;
+    max-width: 480px !important;
+    max-height: 94vh !important;
+    padding: 0.65rem 0.75rem !important;
+    border-radius: 16px !important;
+  }
+  .mobile-role-selector {
+    display: flex !important;
+  }
+  .mobile-add-more-wrapper {
+    display: block !important;
+  }
+  .team-name-input {
+    max-width: 160px !important;
+  }
+  .create-team-picker-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .modal-footer-hint {
+    display: none !important;
+  }
+}
+
 @media (max-width: 1024px) {
+  .team-groupings-layout {
+    grid-template-columns: 1fr;
+  }
   .app-main {
     grid-template-columns: 1fr;
     overflow-y: auto;
@@ -1000,5 +1934,19 @@ body {
   .btn-start-game {
     padding: 0.8rem 1.8rem;
     font-size: 1rem;
+  }
+  .mini-role-header span:first-child {
+    font-size: 0.65rem;
+  }
+  .mini-item-thumb {
+    width: 28px;
+    height: 24px;
+  }
+  .mini-squad-item {
+    grid-template-columns: 28px 1fr auto;
+    padding: 0.2rem 0.25rem;
+  }
+  .mini-item-name {
+    font-size: 0.68rem;
   }
 }

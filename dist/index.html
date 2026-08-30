@@ -1,29 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Axie Battle Ground & 2D Mixer Studio</title>
-  <meta name="description" content="Side-Scrolling Auto-Battle RPG powered by Axie Spine 2D & Axie Classic Cards.">
-  <script type="module" crossorigin src="/assets/index-Ds4aE9Va.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-D-G6ugED.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axie Battle Ground & 2D Spine Studio</title>
+  <meta name="description" content="Axie Battle Ground side scroll auto-battle game with Spine 2D animations, classic stats & cards." />
+  <script type="module" crossorigin src="/assets/index-mmCIs9QQ.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CDe18fhu.css">
 </head>
 <body>
   <div id="app">
+
     <!-- PAGE 1: LANDING SCREEN -->
     <div id="page-landing" class="page-view landing-screen">
       <div class="landing-overlay"></div>
       <div class="landing-content">
-        <div class="landing-logo-badge">⚔️ AXIE BATTLE GROUND</div>
+        <div class="landing-logo-badge">⚔️ RONIN TACTICAL ARENA</div>
         <h1 class="landing-title">AXIE BATTLE GROUND</h1>
-        <p class="landing-subtitle">Tactical Side-Scrolling Auto-Battle RPG Powered by Axie Spine 2D & Classic Cards</p>
+        <p class="landing-subtitle">
+          Assemble your 15-Axie Tactical Squad across Defense, Offense & Neutral formations.
+          Master Spine 2D combat animations and classic Axie skill abilities!
+        </p>
 
-        <div style="display: flex; gap: 1rem;">
+        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
           <button id="btn-start-game" class="btn-start-game">
-            <span>⚔️ START GAME</span>
+            ⚔️ START GAME
           </button>
-          <button id="btn-landing-mixer" class="btn-start-game" style="background: linear-gradient(135deg, var(--accent-purple), #7c4dff); box-shadow: 0 0 30px rgba(157, 78, 221, 0.6);">
-            <span>🎨 MIXER STUDIO</span>
+
+          <button id="btn-landing-mixer" class="btn btn-sm" style="background: rgba(15, 23, 42, 0.8); border-color: var(--accent-cyan); color: var(--accent-cyan); padding: 0.8rem 1.6rem; border-radius: 30px; font-weight: 700;">
+            🎨 Mixer Studio
           </button>
         </div>
       </div>
@@ -31,38 +36,33 @@
 
     <!-- PAGE 2: PLAYER DASHBOARD PAGE -->
     <div id="page-dashboard" class="page-view dashboard-screen" style="display: none;">
-      <!-- Dashboard Top Header Bar -->
+      <!-- Dashboard App Header -->
       <header class="app-header">
         <div class="brand-title">
           <div class="brand-logo">⚔️</div>
-          <div class="brand-name">Axie Battle Ground</div>
-          <span class="badge-version">v1.0.0</span>
+          <span class="brand-name">AXIE BATTLE GROUND</span>
+          <span class="badge-version">v2.5 Tactical</span>
         </div>
 
-        <!-- Dashboard Top Nav Tabs -->
+        <!-- Navigation Tabs -->
         <nav class="dash-nav-tabs">
-          <button id="tab-btn-axies" class="dash-tab-btn active">🧬 Axies</button>
-          <button id="tab-btn-team" class="dash-tab-btn">🛡️ Team</button>
-          <button id="tab-btn-battle" class="dash-tab-btn highlight-tab">⚔️ Battle</button>
+          <button id="tab-btn-axies" class="dash-tab-btn active">🐾 Axies (30)</button>
+          <button id="tab-btn-team" class="dash-tab-btn">🛡️ Team Builder</button>
+          <button id="tab-btn-battle" class="dash-tab-btn">⚔️ Battle Hub</button>
           <button id="tab-btn-friends" class="dash-tab-btn">👥 Friends</button>
           <button id="tab-btn-settings" class="dash-tab-btn">⚙️ Settings</button>
+          <button id="btn-open-mixer-studio" class="dash-tab-btn highlight-tab">🎨 Axie Mixer Studio</button>
         </nav>
 
-        <!-- Studio Switcher & Player Profile -->
-        <div style="display: flex; align-items: center; gap: 1rem;">
-          <button id="btn-open-mixer-studio" class="btn btn-sm" style="background: rgba(0, 240, 255, 0.18); border-color: var(--accent-cyan); color: var(--accent-cyan); font-weight: 700;">
-            🎨 Axie Mixer Studio
-          </button>
-
-          <div class="player-profile-bar">
-            <div class="player-info">
-              <span class="player-name">Ronin_Commander</span>
-              <span class="player-id">ronin:7f81...9821</span>
-            </div>
-            <div class="player-resources">
-              <span class="res-badge gold">💰 12,500</span>
-              <span class="res-badge trophies">🏆 1,850</span>
-            </div>
+        <!-- Player Profile & Resources -->
+        <div class="player-profile-bar">
+          <div class="player-info">
+            <span class="player-name">Commander Lunacia</span>
+            <span class="player-id">ID: #8849-RONIN</span>
+          </div>
+          <div class="player-resources">
+            <span class="res-badge gold">💰 12,500</span>
+            <span class="res-badge trophies">🏆 1,850</span>
           </div>
         </div>
       </header>
@@ -75,7 +75,7 @@
           <div class="tab-pane-header">
             <div>
               <h2 class="pane-title">Axie Directory</h2>
-              <p class="pane-subtitle">Inspect your 15 owned Axies, Spine animations, Classic stats & cards.</p>
+              <p class="pane-subtitle">Inspect your owned Axies, Spine animations, Classic stats & cards.</p>
             </div>
             <div class="input-group" style="margin-bottom: 0; max-width: 320px;">
               <input type="text" id="input-search-axies" class="text-input" placeholder="Search Axie by name, class, ID..." />
@@ -83,7 +83,7 @@
           </div>
 
           <div id="axies-directory-grid" class="axies-grid">
-            <!-- 15 Axie cards populated dynamically -->
+            <!-- Axie cards populated dynamically -->
           </div>
         </section>
 
@@ -92,11 +92,21 @@
           <div class="tab-pane-header">
             <div>
               <h2 class="pane-title">Team Builder</h2>
-              <p class="pane-subtitle">Form your 15-Axie Squad into 3 Tactical Formations: Defense, Offense & Neutral.</p>
+              <p class="pane-subtitle">Form & Edit your 15-Axie Squads across 3 Tactical Formations: Defense, Offense & Neutral.</p>
             </div>
-            <div id="team-summary-badge" class="squad-summary-pill">
-              <span>🛡️ 5 Defense</span> | <span>⚔️ 5 Offense</span> | <span>⚖️ 5 Neutral</span>
+            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+              <div id="team-summary-badge" class="squad-summary-pill">
+                <span>🟢 5 Defense</span> | <span>🔴 5 Offense</span> | <span>🔵 5 Neutral</span>
+              </div>
+              <button id="btn-create-team" class="btn btn-primary" style="padding: 0.65rem 1.4rem; font-size: 0.95rem;">
+                ➕ Create New Team
+              </button>
             </div>
+          </div>
+
+          <!-- CREATED TEAMS SELECTION BAR -->
+          <div id="created-teams-bar" class="created-teams-bar">
+            <!-- Created team pills populated dynamically -->
           </div>
 
           <div class="team-groupings-layout">
@@ -105,6 +115,7 @@
               <div class="column-header">
                 <span class="role-icon">🟢</span>
                 <span class="role-name">DEFENSE (GREEN)</span>
+                <span id="col-count-def" class="role-count-badge">5</span>
                 <span class="role-desc">Frontline Tanks</span>
               </div>
               <div id="defense-squad-list" class="squad-role-list">
@@ -117,6 +128,7 @@
               <div class="column-header">
                 <span class="role-icon">🔴</span>
                 <span class="role-name">OFFENSE (RED)</span>
+                <span id="col-count-off" class="role-count-badge">5</span>
                 <span class="role-desc">Backline Damage Dealers</span>
               </div>
               <div id="offense-squad-list" class="squad-role-list">
@@ -129,6 +141,7 @@
               <div class="column-header">
                 <span class="role-icon">🔵</span>
                 <span class="role-name">NEUTRAL (BLUE)</span>
+                <span id="col-count-neu" class="role-count-badge">5</span>
                 <span class="role-desc">Midline Support & Balance</span>
               </div>
               <div id="neutral-squad-list" class="squad-role-list">
@@ -142,34 +155,58 @@
         <section id="tab-content-battle" class="tab-pane">
           <div class="tab-pane-header">
             <div>
-              <h2 class="pane-title">Battle Arena Hub</h2>
-              <p class="pane-subtitle">Select your battle mode to deploy your 15-Axie Tactical Squad in side-scrolling auto-combat.</p>
+              <h2 class="pane-title">Battle Hub</h2>
+              <p class="pane-subtitle">Deploy your 15-Axie squad in side-scroll auto-battle combat mode.</p>
             </div>
-            <button id="btn-battle-logs" class="btn btn-sm" style="background: rgba(157, 78, 221, 0.25); border-color: var(--accent-purple); color: #d8b4fe;">
-              📜 Battle Logs
-            </button>
           </div>
 
-          <div class="battle-modes-grid">
-            <!-- Casual Match Card -->
-            <div class="battle-card casual-card">
-              <div class="battle-card-badge">PVE / PRACTICE</div>
-              <div class="battle-card-icon">⚔️</div>
-              <h3 class="battle-card-title">Casual Match</h3>
-              <p class="battle-card-desc">Test your 15-Axie squad formations against AI waves without MMR penalty.</p>
-              <button id="btn-start-casual" class="btn btn-primary btn-battle-action">Enter Casual Battle</button>
+          <div class="battle-hub-grid">
+            <div class="battle-modes-grid">
+              <!-- Casual Battle Mode -->
+              <div class="battle-mode-card casual-card">
+                <div class="mode-badge">CASUAL</div>
+                <h3 class="mode-title">Casual Arena Practice</h3>
+                <p class="mode-desc">Test your 15-Axie defense, offense & neutral squad against AI opponents with no MMR penalty.</p>
+                <button class="btn btn-primary btn-battle-start" onclick="alert('⚔️ Casual Battle match queued! Loading arena canvas...')">
+                  ⚔️ Casual Battle
+                </button>
+              </div>
+
+              <!-- Ranked Battle Mode -->
+              <div class="battle-mode-card ranked-card">
+                <div class="mode-badge gold">RANKED ARENA</div>
+                <h3 class="mode-title">Competitive Ranked Battle</h3>
+                <p class="mode-desc">Compete for Leaderboard Trophies, SLP rewards, and Ronin MMR ranking.</p>
+                <div class="rank-info-box">
+                  <span>Current Rank: <strong>Grandmaster III</strong></span>
+                  <span>MMR: <strong>1,850</strong></span>
+                </div>
+                <button class="btn btn-primary btn-battle-start" style="background: linear-gradient(135deg, var(--accent-gold), #f59e0b); color: #070a12;" onclick="alert('🏆 Ranked Arena match queued! Searching for opponent...')">
+                  🏆 Ranked Match
+                </button>
+              </div>
             </div>
 
-            <!-- Ranked Match Card -->
-            <div class="battle-card ranked-card">
-              <div class="battle-card-badge ranked">RANKED COMPETITIVE</div>
-              <div class="battle-card-icon">🏆</div>
-              <h3 class="battle-card-title">Ranked Arena</h3>
-              <p class="battle-card-desc">Compete on Ronin leaderboards, earn trophies, and unlock AXS rewards.</p>
-              <div class="rank-tier-info">
-                <span>Current Rank: <strong>Grandmaster III (1,850 MMR)</strong></span>
+            <!-- Battle Logs Section -->
+            <div class="battle-logs-preview-card panel-card">
+              <div class="panel-title">
+                <span>📜 Recent Combat Logs</span>
+                <button id="btn-open-battle-logs" class="btn btn-sm">View Full Logs</button>
               </div>
-              <button id="btn-start-ranked" class="btn btn-primary btn-battle-action ranked-btn">Deploy Ranked Battle</button>
+              <div class="logs-preview-list">
+                <div class="log-preview-item win">
+                  <span>⚔️ Ranked Match vs <strong>Jihoz_Axie</strong></span>
+                  <span class="log-tag win">VICTORY (+32 MMR)</span>
+                </div>
+                <div class="log-preview-item win">
+                  <span>⚔️ Casual Battle vs <strong>AI Commander</strong></span>
+                  <span class="log-tag win">VICTORY</span>
+                </div>
+                <div class="log-preview-item loss">
+                  <span>⚔️ Ranked Match vs <strong>Axie_Master_99</strong></span>
+                  <span class="log-tag loss">DEFEAT (-18 MMR)</span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -178,13 +215,10 @@
         <section id="tab-content-friends" class="tab-pane">
           <div class="tab-pane-header">
             <div>
-              <h2 class="pane-title">Friends & Rivals</h2>
-              <p class="pane-subtitle">Connect with commanders, compare 15-Axie squads, and initiate friendly duels.</p>
+              <h2 class="pane-title">Friends & Guildmates</h2>
+              <p class="pane-subtitle">Challenge friends to 15-Axie auto-battles or view their active lineups.</p>
             </div>
-            <div class="input-group" style="margin-bottom: 0; max-width: 320px;">
-              <input type="text" class="text-input" placeholder="Add Friend by Ronin ID..." />
-              <button class="btn btn-primary btn-sm">Add</button>
-            </div>
+            <button class="btn btn-primary btn-sm" onclick="alert('Add Friend modal opened')">➕ Add Friend</button>
           </div>
 
           <div id="friends-list-container" class="friends-grid">
@@ -192,271 +226,258 @@
           </div>
         </section>
 
-        <!-- TAB 5: SETTINGS TAB -->
+        <!-- TAB 5: GAME SETTINGS TAB -->
         <section id="tab-content-settings" class="tab-pane">
           <div class="tab-pane-header">
             <div>
               <h2 class="pane-title">Game Settings</h2>
-              <p class="pane-subtitle">Configure audio FX, graphics quality, auto-battle speed multipliers, and display preferences.</p>
+              <p class="pane-subtitle">Configure audio, 2D Spine rendering resolution, and combat parameters.</p>
             </div>
           </div>
 
-          <div class="settings-form-card">
-            <div class="setting-row">
-              <label class="setting-label">
-                <span>🎵 Background Music (BGM)</span>
-                <span id="val-bgm">75%</span>
-              </label>
-              <input type="range" id="slider-bgm" min="0" max="100" value="75" class="setting-slider" />
-            </div>
-
-            <div class="setting-row">
-              <label class="setting-label">
-                <span>🔊 Sound Effects (SFX)</span>
-                <span id="val-sfx">90%</span>
-              </label>
-              <input type="range" id="slider-sfx" min="0" max="100" value="90" class="setting-slider" />
-            </div>
-
-            <div class="setting-row">
-              <label class="setting-label">
-                <span>⚡ Auto-Battle Speed Multiplier</span>
-              </label>
-              <div class="setting-options">
-                <button class="setting-opt-btn active">1x Normal</button>
-                <button class="setting-opt-btn">2x Fast</button>
-                <button class="setting-opt-btn">3x Turbo</button>
+          <div class="settings-grid">
+            <div class="panel-card">
+              <h3 class="panel-title">🔊 Audio & Sound FX</h3>
+              <div class="settings-row">
+                <span>BGM Music Volume</span>
+                <input type="range" min="0" max="100" value="80" class="slider" />
+              </div>
+              <div class="settings-row">
+                <span>Sound FX Volume</span>
+                <input type="range" min="0" max="100" value="100" class="slider" />
               </div>
             </div>
 
-            <div class="setting-row">
-              <label class="setting-label">
-                <span>🖼️ Graphics Quality</span>
-              </label>
-              <div class="setting-options">
-                <button class="setting-opt-btn active">Ultra 60FPS</button>
-                <button class="setting-opt-btn">High 30FPS</button>
-                <button class="setting-opt-btn">Performance</button>
+            <div class="panel-card">
+              <h3 class="panel-title">🎬 Spine 2D Graphics & Performance</h3>
+              <div class="settings-row">
+                <span>Render Resolution</span>
+                <select class="text-input" style="max-width: 160px;">
+                  <option value="high">High (Device DPR)</option>
+                  <option value="medium">Medium (1.0x)</option>
+                </select>
+              </div>
+              <div class="settings-row">
+                <span>Auto-Battle Speed</span>
+                <select class="text-input" style="max-width: 160px;">
+                  <option value="1">1.0x Normal</option>
+                  <option value="1.5">1.5x Fast</option>
+                  <option value="2">2.0x Ultra</option>
+                </select>
               </div>
             </div>
           </div>
         </section>
+
       </main>
     </div>
 
-    <!-- PAGE 3: AXIE MIXER STUDIO MODE -->
+    <!-- PAGE 3: AXIE MIXER STUDIO (ORIGINAL DESIGN) -->
     <div id="page-mixer-studio" class="page-view studio-screen" style="display: none;">
-      <!-- Studio Header -->
+      <!-- Header Bar -->
       <header class="app-header">
         <div class="brand-title">
           <div class="brand-logo">🎨</div>
-          <div class="brand-name">Axie Spine 2D Mixer Studio</div>
-          <span class="badge-version">v1.4.9</span>
+          <span class="brand-name">Axie Mixer Studio</span>
+          <span class="badge-version">2D Spine Engine</span>
         </div>
 
-        <div class="header-actions">
-          <button id="btn-view-raw-json" class="btn btn-sm" style="background: rgba(157, 78, 221, 0.2); border-color: var(--accent-purple); color: #d8b4fe;">
-            { } Raw Skill JSON
-          </button>
-          <button id="btn-export-snapshot" class="btn btn-primary btn-sm">
-            📸 Export PNG Snapshot
-          </button>
-          <button id="btn-copy-genes" class="btn btn-sm">
-            📋 Copy Genes
-          </button>
-          <button id="btn-back-to-game" class="btn btn-sm" style="background: rgba(0, 240, 255, 0.2); border-color: var(--accent-cyan); color: var(--accent-cyan); font-weight: 700;">
-            🎮 Back to Game
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <button id="btn-back-to-game" class="btn btn-primary">
+            ⚔️ Back to Axie Battle Ground
           </button>
         </div>
       </header>
 
-      <!-- Studio Main Layout -->
-      <div class="app-main">
-        <!-- Left Sidebar: Controls & Gene Input -->
-        <aside class="sidebar">
-          <section class="panel-card">
-            <div class="panel-title">
-              <span>Load Axie</span>
-            </div>
+      <!-- 3-Column Original Studio Main Layout -->
+      <main class="app-main">
 
+        <!-- LEFT SIDEBAR: Gene Decoder & Presets -->
+        <aside class="sidebar sidebar-left">
+          <!-- Fetch Axie by ID -->
+          <div class="panel-card">
+            <div class="panel-title">Axie Infinity ID Fetcher</div>
             <div class="input-group">
-              <input type="text" id="input-axie-id" class="text-input" placeholder="Axie ID (e.g. 5555, 1234)" />
-              <button id="btn-fetch-id" class="btn btn-primary">Fetch ID</button>
+              <input type="number" id="input-axie-id" class="text-input" placeholder="Enter Axie ID (e.g. 5555)" />
+              <button id="btn-fetch-id" class="btn btn-primary">Fetch</button>
             </div>
-
-            <div class="input-group">
-              <input type="text" id="input-genes" class="text-input" placeholder="Paste 512-bit Genes Hex string..." />
-              <button id="btn-load-genes" class="btn">Load Genes</button>
-            </div>
-          </section>
-
-          <section class="panel-card">
-            <div class="panel-title">
-              <span>Axie Classic Stats</span>
-              <span id="total-stats-badge" class="badge" style="background: rgba(0, 240, 255, 0.2); color: var(--accent-cyan);">164 Total</span>
-            </div>
-
-            <div class="stats-container">
-              <div class="stat-bar-group">
-                <div class="stat-header">
-                  <span class="stat-name">❤️ HP</span>
-                  <span id="stat-val-hp" class="stat-val">45</span>
-                </div>
-                <div class="stat-track">
-                  <div id="stat-bar-hp" class="stat-fill fill-hp" style="width: 70%;"></div>
-                </div>
-              </div>
-
-              <div class="stat-bar-group">
-                <div class="stat-header">
-                  <span class="stat-name">⚡ Speed</span>
-                  <span id="stat-val-speed" class="stat-val">57</span>
-                </div>
-                <div class="stat-track">
-                  <div id="stat-bar-speed" class="stat-fill fill-speed" style="width: 90%;"></div>
-                </div>
-              </div>
-
-              <div class="stat-bar-group">
-                <div class="stat-header">
-                  <span class="stat-name">🎯 Skill</span>
-                  <span id="stat-val-skill" class="stat-val">35</span>
-                </div>
-                <div class="stat-track">
-                  <div id="stat-bar-skill" class="stat-fill fill-skill" style="width: 55%;"></div>
-                </div>
-              </div>
-
-              <div class="stat-bar-group">
-                <div class="stat-header">
-                  <span class="stat-name">🔥 Morale</span>
-                  <span id="stat-val-morale" class="stat-val">27</span>
-                </div>
-                <div class="stat-track">
-                  <div id="stat-bar-morale" class="stat-fill fill-morale" style="width: 45%;"></div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section class="panel-card">
-            <div class="panel-title">
-              <span>Sample Presets</span>
-            </div>
-            <div id="samples-list" class="samples-grid">
-              <!-- Sample cards dynamically populated -->
-            </div>
-          </section>
-
-          <section class="panel-card">
-            <div class="panel-title">
-              <span>Spine Accessories</span>
-            </div>
-            <div id="accessories-container" class="accessories-list">
-              <!-- Checkboxes for accessories dynamically populated -->
-            </div>
-          </section>
-        </aside>
-
-        <!-- Center: Pixi Canvas -->
-        <div class="canvas-container" id="canvas-wrapper">
-          <canvas id="pixi-canvas" class="pixi-canvas"></canvas>
-
-          <div id="loading-overlay" class="loading-overlay" style="display: none;">
-            <div class="spinner"></div>
-            <div id="loading-text" style="font-weight: 600; color: var(--accent-cyan);">Building Axie Spine Assets...</div>
           </div>
 
-          <div class="canvas-controls">
-            <div class="control-item">
-              <span>Zoom:</span>
-              <input type="range" id="slider-zoom" min="0.15" max="0.8" step="0.02" value="0.35" />
+          <!-- Raw 512-Bit Genes Input -->
+          <div class="panel-card">
+            <div class="panel-title">
+              <span>Axie 512-Bit Genes String</span>
+              <button id="btn-copy-genes" class="btn btn-sm" title="Copy Genes">📋</button>
             </div>
-
-            <div class="control-item">
-              <span>Speed:</span>
-              <input type="range" id="slider-speed" min="0.2" max="2.5" step="0.1" value="1.0" />
-              <span id="speed-label" style="min-width: 32px;">1.0x</span>
-            </div>
-
-            <button id="btn-flip" class="btn btn-sm">↔️ Flip</button>
-
-            <div class="control-item">
-              <span>BG:</span>
-              <select id="select-bg" class="text-input" style="padding: 0.3rem 0.5rem;">
-                <option value="0x0f172a">Dark Slate</option>
-                <option value="0x000000">Pure Black</option>
-                <option value="0x1b2838">Deep Blue</option>
-                <option value="0x142115">Forest Green</option>
-                <option value="0x2d122e">Mystic Violet</option>
-              </select>
+            <div class="input-group">
+              <input type="text" id="input-genes" class="text-input" placeholder="0x..." />
+              <button id="btn-load-genes" class="btn">Load</button>
             </div>
           </div>
-        </div>
 
-        <!-- Right Sidebar: Animations, Axie Classic Cards & Gene Breakdown -->
-        <aside class="sidebar sidebar-right">
-          <section class="panel-card">
-            <div class="panel-title">
-              <span>Axie Classic Cards</span>
-              <button id="btn-inspect-cards-json" class="btn btn-sm" style="font-size: 0.7rem; padding: 0.2rem 0.5rem;">
-                { } JSON
-              </button>
-            </div>
-            <div id="cards-grid" class="cards-grid">
-              <!-- Cards populated dynamically -->
-            </div>
-          </section>
-
-          <section class="panel-card">
-            <div class="panel-title">
-              <span>Spine Animations</span>
-              <label style="font-size: 0.75rem; font-weight: normal; cursor: pointer;">
-                <input type="checkbox" id="chk-loop" checked style="accent-color: var(--accent-cyan);" /> Loop
-              </label>
-            </div>
-            <div id="animations-grid" class="anim-grid">
-              <!-- Animation buttons dynamically inserted -->
-            </div>
-          </section>
-
-          <section class="panel-card">
+          <!-- Decoded Class & Body Parts -->
+          <div class="panel-card">
             <div class="panel-title">
               <span>Decoded Gene Parts</span>
               <span id="class-badge" class="sample-class-tag tag-aquatic">Aquatic</span>
             </div>
-            <div id="decoded-parts-list" class="decoded-parts">
-              <!-- Decoded parts breakdown list -->
+            <div id="decoded-parts-list" class="parts-list">
+              <!-- Decoded parts inserted dynamically -->
             </div>
-          </section>
+          </div>
+
+          <!-- Sample Axie Lineup Presets -->
+          <div class="panel-card">
+            <div class="panel-title">Sample Axie Presets</div>
+            <div id="samples-list" class="samples-grid">
+              <!-- Sample items inserted dynamically -->
+            </div>
+          </div>
         </aside>
-      </div>
+
+        <!-- CENTER VIEWPORT: PixiJS Canvas & Interactive Controls -->
+        <section class="canvas-container">
+          <canvas id="pixi-canvas" class="pixi-canvas"></canvas>
+
+          <!-- Floating Interactive Control Bar -->
+          <div class="canvas-controls">
+            <div class="control-group">
+              <span class="control-label">Zoom:</span>
+              <input type="range" id="slider-zoom" min="0.15" max="0.8" step="0.01" value="0.35" class="slider" />
+            </div>
+
+            <div class="control-group">
+              <span class="control-label">Speed:</span>
+              <input type="range" id="slider-speed" min="0.2" max="2.0" step="0.1" value="1.0" class="slider" />
+              <span id="speed-label" class="badge">1.0x</span>
+            </div>
+
+            <button id="btn-flip" class="btn btn-sm">↔️ Flip</button>
+
+            <div class="control-group">
+              <span class="control-label">Background:</span>
+              <select id="select-bg" class="text-input" style="padding: 0.3rem 0.5rem; font-size: 0.8rem;">
+                <option value="0f172a">Dark Slate</option>
+                <option value="070a12">Cyber Black</option>
+                <option value="1e293b">Midnight Blue</option>
+                <option value="ffffff">Pure White</option>
+              </select>
+            </div>
+
+            <button id="btn-export-snapshot" class="btn btn-sm btn-primary">📸 Snapshot</button>
+          </div>
+        </section>
+
+        <!-- RIGHT SIDEBAR: Spine Animations & Accessories -->
+        <aside class="sidebar sidebar-right">
+
+          <!-- Axie Classic Stats -->
+          <div class="panel-card">
+            <div class="panel-title">
+              <span>Axie Classic Stats</span>
+              <span id="total-stats-badge" class="badge" style="background: rgba(0, 240, 255, 0.15); color: var(--accent-cyan);">164 Total</span>
+            </div>
+            <div class="stats-container">
+              <div class="stat-bar-group">
+                <div class="stat-header"><span>❤️ Health (HP)</span><strong id="stat-val-hp">45</strong></div>
+                <div class="stat-track"><div id="stat-bar-hp" class="stat-fill fill-hp" style="width: 70%;"></div></div>
+              </div>
+
+              <div class="stat-bar-group">
+                <div class="stat-header"><span>⚡ Speed</span><strong id="stat-val-speed">57</strong></div>
+                <div class="stat-track"><div id="stat-bar-speed" class="stat-fill fill-speed" style="width: 85%;"></div></div>
+              </div>
+
+              <div class="stat-bar-group">
+                <div class="stat-header"><span>🎯 Skill</span><strong id="stat-val-skill">35</strong></div>
+                <div class="stat-track"><div id="stat-bar-skill" class="stat-fill fill-skill" style="width: 50%;"></div></div>
+              </div>
+
+              <div class="stat-bar-group">
+                <div class="stat-header"><span>🔥 Morale</span><strong id="stat-val-morale">27</strong></div>
+                <div class="stat-track"><div id="stat-bar-morale" class="stat-fill fill-morale" style="width: 40%;"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Axie Classic Cards & Skills -->
+          <div class="panel-card">
+            <div class="panel-title">
+              <span>Axie Classic Cards</span>
+              <button id="btn-inspect-cards-json" class="btn btn-sm" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; border-color: var(--accent-purple); color: var(--accent-purple);">
+                { } Raw JSON
+              </button>
+            </div>
+            <div id="cards-grid" class="cards-grid">
+              <!-- Classic Cards inserted dynamically -->
+            </div>
+          </div>
+
+          <!-- Spine 2D Animation Controller -->
+          <div class="panel-card">
+            <div class="panel-title">
+              <span>Spine 2D Animations</span>
+              <label style="font-size: 0.78rem; display: flex; align-items: center; gap: 0.3rem; text-transform: none;">
+                <input type="checkbox" id="chk-loop" checked /> Loop
+              </label>
+            </div>
+            <div id="animations-grid" class="anim-grid">
+              <!-- Animation buttons inserted dynamically -->
+            </div>
+          </div>
+
+          <!-- Equipped Accessories -->
+          <div class="panel-card">
+            <div class="panel-title">Equipped Accessories</div>
+            <div id="accessories-container" class="accessories-list">
+              <!-- Accessories checkboxes inserted dynamically -->
+            </div>
+          </div>
+
+          <!-- View Raw Skill JSON Button -->
+          <div class="panel-card">
+            <button id="btn-view-raw-json" class="btn btn-primary" style="width: 100%;">
+              { } View Raw Skill JSON
+            </button>
+          </div>
+
+        </aside>
+
+      </main>
     </div>
 
-    <!-- AXIE DETAIL INSPECTOR MODAL (Spine 2D + Stats + Classic Cards) -->
+    <!-- LOADING OVERLAY -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+      <div class="spinner"></div>
+      <span id="loading-text" class="loading-text">Loading Axie Assets...</span>
+    </div>
+
+    <!-- LIGHTBOX INSPECTOR MODAL -->
     <div id="axie-inspector-modal" class="card-modal-backdrop" style="display: none;">
       <div class="axie-inspector-container">
         <button id="btn-close-inspector" class="card-modal-close">✕</button>
 
+        <div class="inspector-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+          <div>
+            <h3 id="inspector-title" style="font-family: var(--font-heading); color: var(--accent-cyan); font-size: 1.4rem;">Axie Details</h3>
+            <span id="inspector-class-tag" class="sample-class-tag tag-aquatic">Aquatic</span>
+          </div>
+          <div class="input-group" style="margin-bottom: 0; align-items: center;">
+            <span style="font-size: 0.8rem; color: var(--text-secondary);">Animation:</span>
+            <select id="inspector-anim-select" class="text-input" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">
+              <!-- Animations dynamically populated -->
+            </select>
+          </div>
+        </div>
+
         <div class="inspector-grid">
-          <div class="inspector-canvas-col">
-            <div class="inspector-canvas-box">
-              <canvas id="inspector-spine-canvas"></canvas>
-            </div>
-            <div class="inspector-anim-bar">
-              <span style="font-size: 0.75rem; color: var(--text-secondary);">Animation:</span>
-              <select id="inspector-anim-select" class="text-input" style="padding: 0.3rem 0.5rem; font-size: 0.78rem;">
-                <!-- Animations populated dynamically -->
-              </select>
-            </div>
+          <!-- Left: Live 2D Spine Canvas -->
+          <div class="inspector-spine-wrapper" style="width: 100%; height: 320px; background: radial-gradient(circle at center, #1e293b 0%, #070a12 90%); border-radius: 14px; overflow: hidden; position: relative;">
+            <canvas id="inspector-spine-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
           </div>
 
-          <div class="inspector-info-col">
-            <div class="inspector-header">
-              <h2 id="inspector-title" class="inspector-name">Axie Name</h2>
-              <span id="inspector-class-tag" class="sample-class-tag tag-aquatic">Aquatic</span>
-            </div>
-
+          <!-- Right: Classic Stats & Cards -->
+          <div class="inspector-details-wrapper" style="display: flex; flex-direction: column; gap: 1rem;">
             <div class="inspector-stats-box">
               <h4 style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.4rem;">Axie Classic Base Stats</h4>
               <div id="inspector-stats-grid" class="inspector-stats-row">
@@ -529,6 +550,151 @@
         </div>
       </div>
     </div>
+
+    <!-- CREATE / EDIT CUSTOM TEAM MODAL (NO-SCROLL MOBILE-COMPATIBLE SQUAD BUILDER) -->
+    <div id="create-team-modal" class="card-modal-backdrop" style="display: none;">
+      <div class="card-modal-content create-team-modal-container">
+        <button id="btn-close-create-team" class="card-modal-close">✕</button>
+
+        <div class="create-team-modal-header">
+          <div class="modal-header-top">
+            <h3 id="create-team-modal-title" class="modal-main-title">
+              ⚔️ Edit Custom Squad Team
+            </h3>
+            <span id="create-team-counter-badge" class="badge modal-counter-badge">
+              Squad: 15 / 15 Axies
+            </span>
+          </div>
+
+          <!-- Team Name Input & Role Badges -->
+          <div class="modal-name-role-bar">
+            <div class="team-name-input-group">
+              <label class="team-name-label">Team Name:</label>
+              <input type="text" id="input-team-name" class="text-input team-name-input" placeholder="e.g. Alpha Squad #1" />
+            </div>
+            <div id="modal-role-counters" class="modal-role-counters">
+              <span id="modal-badge-def" class="badge badge-def">🟢 5 Defense</span>
+              <span id="modal-badge-off" class="badge badge-off">🔴 5 Offense</span>
+              <span id="modal-badge-neu" class="badge badge-neu">🔵 5 Neutral</span>
+            </div>
+          </div>
+
+          <!-- View Switcher (Visible on Mobile & Responsive Viewports) -->
+          <div class="modal-view-switcher">
+            <button id="modal-tab-squad" class="modal-tab-btn active">
+              🛡️ Squad Formation (<span id="tab-squad-count">15</span>/15)
+            </button>
+            <button id="modal-tab-inv" class="modal-tab-btn">
+              ➕ Add Axies Roster (<span id="tab-inv-count">30</span>)
+            </button>
+          </div>
+        </div>
+
+        <div class="create-team-body-grid">
+          <!-- Panel 1: Selected 3 Tactical Squad Columns (With Axie Looks) -->
+          <div id="panel-squad-formation" class="create-team-squads-panel">
+            <div class="panel-section-header">
+              <h4 class="panel-section-title">
+                Active Squad Formation
+              </h4>
+              <!-- Role filter pills for compact mobile view -->
+              <div class="mobile-role-selector">
+                <button class="mobile-role-btn active" data-filter="all">All Roles</button>
+                <button class="mobile-role-btn" data-filter="Defense">🟢 Def</button>
+                <button class="mobile-role-btn" data-filter="Offense">🔴 Off</button>
+                <button class="mobile-role-btn" data-filter="Neutral">🔵 Neu</button>
+              </div>
+            </div>
+
+            <div class="create-team-3-cols">
+              <!-- Defense Green Column -->
+              <div class="mini-role-col role-defense" data-role="Defense">
+                <div class="mini-role-header">
+                  <span>🟢 DEFENSE</span>
+                  <span id="count-def-badge" class="badge count-badge-def">5</span>
+                </div>
+                <div id="create-team-def-list" class="mini-role-list">
+                  <!-- Populated dynamically with Axie looks -->
+                </div>
+              </div>
+
+              <!-- Offense Red Column -->
+              <div class="mini-role-col role-offense" data-role="Offense">
+                <div class="mini-role-header">
+                  <span>🔴 OFFENSE</span>
+                  <span id="count-off-badge" class="badge count-badge-off">5</span>
+                </div>
+                <div id="create-team-off-list" class="mini-role-list">
+                  <!-- Populated dynamically with Axie looks -->
+                </div>
+              </div>
+
+              <!-- Neutral Blue Column -->
+              <div class="mini-role-col role-neutral" data-role="Neutral">
+                <div class="mini-role-header">
+                  <span>🔵 NEUTRAL</span>
+                  <span id="count-neu-badge" class="badge count-badge-neu">5</span>
+                </div>
+                <div id="create-team-neu-list" class="mini-role-list">
+                  <!-- Populated dynamically with Axie looks -->
+                </div>
+              </div>
+            </div>
+
+            <div class="mobile-add-more-wrapper">
+              <button id="btn-mobile-goto-inv" class="btn btn-sm btn-primary" style="width: 100%; padding: 0.5rem;">
+                ➕ Add Axies from Inventory
+              </button>
+            </div>
+          </div>
+
+          <!-- Panel 2: Owned Axies Inventory (With Axie Looks & Add Buttons) -->
+          <div id="panel-inventory-roster" class="create-team-inventory-panel">
+            <div class="inventory-panel-header">
+              <h4 class="panel-section-title" style="margin-bottom: 0;">
+                Owned Axies Roster
+              </h4>
+              <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <input type="text" id="input-filter-picker" class="text-input" placeholder="Search Axie..." style="padding: 0.25rem 0.5rem; font-size: 0.74rem; max-width: 130px;" />
+                <div class="inventory-pagination-bar">
+                  <button id="btn-inv-prev" class="btn-page-step" title="Previous Page">◀</button>
+                  <span id="inv-page-label" class="inv-page-indicator">1/4</span>
+                  <button id="btn-inv-next" class="btn-page-step" title="Next Page">▶</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Class filter chips -->
+            <div class="inventory-class-filter-bar">
+              <button class="class-filter-chip active" data-class="all">All</button>
+              <button class="class-filter-chip" data-class="Aquatic">Aqua</button>
+              <button class="class-filter-chip" data-class="Beast">Beast</button>
+              <button class="class-filter-chip" data-class="Plant">Plant</button>
+              <button class="class-filter-chip" data-class="Bird">Bird</button>
+              <button class="class-filter-chip" data-class="Reptile">Rep</button>
+              <button class="class-filter-chip" data-class="Bug">Bug</button>
+            </div>
+
+            <div id="create-team-picker-grid" class="create-team-picker-grid">
+              <!-- Inventory cards with Axie looks, stats, add/remove buttons -->
+            </div>
+          </div>
+        </div>
+
+        <div class="create-team-modal-footer">
+          <span id="modal-footer-hint" class="modal-footer-hint">
+            Max 15 Axies. Add or remove Axies to customize your squad.
+          </span>
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <button id="btn-cancel-create-team" class="btn btn-sm">Cancel</button>
+            <button id="btn-save-custom-team" class="btn btn-sm btn-primary" style="padding: 0.5rem 1.4rem; font-weight: 700;">
+              💾 Save Team
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
 </body>

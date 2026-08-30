@@ -9,18 +9,29 @@ import {
   AxieCardAbility,
 } from './axie/cards-service';
 import { calculateAxieClassicStats } from './axie/stats-calculator';
-import { TeamManager, TeamRole } from './game/team-manager';
+import { TeamManager, TeamRole, AxieTeam } from './game/team-manager';
 import { getAxieBodyStructure512 } from '@axieinfinity/mixer';
 
 class AxieBattleGroundApp {
   private teamManager: TeamManager = new TeamManager();
   private inspectorEngine?: AxieMixerEngine;
   private studioEngine?: AxieMixerEngine;
+  private portraitEngine?: AxieMixerEngine;
+  private portraitCache: Map<string, string> = new Map();
   private currentInspectedAxie?: SampleAxie;
   private currentSampleIndex: number = 0;
   private equippedAccessoriesMap: Map<string, AccessoryItem> = new Map();
   private currentAxieCards: AxieCardAbility[] = [];
   private jsonTabMode: 'selected' | 'all' = 'selected';
+  private tempSquadMap: Map<string, TeamRole> = new Map();
+  private editingTeamId: string = 'team-1';
+
+  // Mobile / Responsive Modal state
+  private modalActiveTab: 'squad' | 'inventory' = 'squad';
+  private mobileRoleFilter: string = 'all';
+  private inventoryCurrentPage: number = 1;
+  private inventoryPageSize: number = 6;
+  private inventoryClassFilter: string = 'all';
 
   constructor() {
     this.init();
@@ -31,12 +42,25 @@ class AxieBattleGroundApp {
     await loadCardAbilitiesDatabase();
 
     this.setupNavigation();
+    this.setupCreateTeamModal();
     this.renderSamplesList();
     this.renderAccessoriesList();
     this.renderAxiesDirectory();
     this.renderTeamBuilder();
     this.renderFriendsList();
     this.renderBattleLogs();
+
+    // Preload portraits in the background so they are instantly ready for modal and squad cards
+    this.preloadAllAxiePortraits();
+  }
+
+  private async preloadAllAxiePortraits() {
+    const axies = this.teamManager.getPlayerAxies();
+    for (const axie of axies) {
+      if (!this.portraitCache.has(axie.id)) {
+        await this.getOrCreateAxiePortrait(axie);
+      }
+    }
   }
 
   private setupNavigation() {
@@ -103,7 +127,7 @@ class AxieBattleGroundApp {
       });
     });
 
-    // LIGHTBOX INSPECTOR X CLOSE BUTTON FIX
+    // LIGHTBOX INSPECTOR X CLOSE BUTTON
     const btnCloseInspector = document.getElementById('btn-close-inspector');
     const inspectorModal = document.getElementById('axie-inspector-modal');
 
@@ -130,10 +154,444 @@ class AxieBattleGroundApp {
         if (jsonModal) jsonModal.style.display = 'none';
         const battleLogsModal = document.getElementById('battle-logs-modal');
         if (battleLogsModal) battleLogsModal.style.display = 'none';
+        const createTeamModal = document.getElementById('create-team-modal');
+        if (createTeamModal) createTeamModal.style.display = 'none';
       }
     });
 
     this.setupStudioEventListeners();
+  }
+
+  /* ==========================================================================
+     CREATE / EDIT CUSTOM TEAM MODAL LOGIC (NO-SCROLL MOBILE COMPATIBLE)
+     ========================================================================== */
+  private setupCreateTeamModal() {
+    const btnCreateTeam = document.getElementById('btn-create-team');
+    const createTeamModal = document.getElementById('create-team-modal');
+    const btnCloseCreateTeam = document.getElementById('btn-close-create-team');
+    const btnCancelCreateTeam = document.getElementById('btn-cancel-create-team');
+    const btnSaveCustomTeam = document.getElementById('btn-save-custom-team');
+    const inputFilterPicker = document.getElementById('input-filter-picker') as HTMLInputElement;
+
+    btnCreateTeam?.addEventListener('click', () => {
+      const newTeam = this.teamManager.createNewTeam(`Custom Squad #${this.teamManager.getTeams().length + 1}`);
+      this.openEditTeamModal(newTeam);
+    });
+
+    btnCloseCreateTeam?.addEventListener('click', () => {
+      if (createTeamModal) createTeamModal.style.display = 'none';
+    });
+
+    btnCancelCreateTeam?.addEventListener('click', () => {
+      if (createTeamModal) createTeamModal.style.display = 'none';
+    });
+
+    createTeamModal?.addEventListener('click', (e) => {
+      if (e.target === createTeamModal) createTeamModal.style.display = 'none';
+    });
+
+    // Mobile view switch buttons
+    const tabSquad = document.getElementById('modal-tab-squad');
+    const tabInv = document.getElementById('modal-tab-inv');
+    const btnMobileGotoInv = document.getElementById('btn-mobile-goto-inv');
+
+    const switchModalView = (view: 'squad' | 'inventory') => {
+      this.modalActiveTab = view;
+      const panelSquad = document.getElementById('panel-squad-formation');
+      const panelInv = document.getElementById('panel-inventory-roster');
+
+      if (view === 'squad') {
+        tabSquad?.classList.add('active');
+        tabInv?.classList.remove('active');
+        if (panelSquad) panelSquad.style.display = 'flex';
+        if (panelInv) panelInv.style.display = window.innerWidth <= 900 ? 'none' : 'flex';
+      } else {
+        tabInv?.classList.add('active');
+        tabSquad?.classList.remove('active');
+        if (panelSquad) panelSquad.style.display = window.innerWidth <= 900 ? 'none' : 'flex';
+        if (panelInv) panelInv.style.display = 'flex';
+      }
+    };
+
+    tabSquad?.addEventListener('click', () => switchModalView('squad'));
+    tabInv?.addEventListener('click', () => switchModalView('inventory'));
+    btnMobileGotoInv?.addEventListener('click', () => switchModalView('inventory'));
+
+    window.addEventListener('resize', () => {
+      const panelSquad = document.getElementById('panel-squad-formation');
+      const panelInv = document.getElementById('panel-inventory-roster');
+      if (window.innerWidth > 900) {
+        if (panelSquad) panelSquad.style.display = 'flex';
+        if (panelInv) panelInv.style.display = 'flex';
+      } else {
+        switchModalView(this.modalActiveTab);
+      }
+    });
+
+    // Mobile role selector buttons
+    const roleBtns = document.querySelectorAll('.mobile-role-btn');
+    roleBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        roleBtns.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.mobileRoleFilter = (btn as HTMLElement).dataset.filter || 'all';
+        this.applyMobileRoleFilter();
+      });
+    });
+
+    // Inventory pagination controls
+    const btnInvPrev = document.getElementById('btn-inv-prev');
+    const btnInvNext = document.getElementById('btn-inv-next');
+
+    btnInvPrev?.addEventListener('click', () => {
+      if (this.inventoryCurrentPage > 1) {
+        this.inventoryCurrentPage--;
+        this.renderCreateTeamPickerGrid();
+      }
+    });
+
+    btnInvNext?.addEventListener('click', () => {
+      this.inventoryCurrentPage++;
+      this.renderCreateTeamPickerGrid();
+    });
+
+    // Inventory class filter chips
+    const classChips = document.querySelectorAll('.class-filter-chip');
+    classChips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        classChips.forEach((c) => c.classList.remove('active'));
+        chip.classList.add('active');
+        this.inventoryClassFilter = (chip as HTMLElement).dataset.class || 'all';
+        this.inventoryCurrentPage = 1;
+        this.renderCreateTeamPickerGrid();
+      });
+    });
+
+    inputFilterPicker?.addEventListener('input', () => {
+      this.inventoryCurrentPage = 1;
+      this.renderCreateTeamPickerGrid();
+    });
+
+    btnSaveCustomTeam?.addEventListener('click', () => {
+      const inputTeamName = document.getElementById('input-team-name') as HTMLInputElement;
+      const teamName = inputTeamName ? inputTeamName.value.trim() : 'Custom Squad';
+
+      if (this.tempSquadMap.size === 0) {
+        alert('⚠️ Please add at least 1 Axie to your squad before saving!');
+        return;
+      }
+
+      // Save team in TeamManager
+      this.teamManager.saveTeam(this.editingTeamId, teamName || 'Custom Squad', this.tempSquadMap);
+      this.teamManager.setActiveTeam(this.editingTeamId);
+
+      if (createTeamModal) createTeamModal.style.display = 'none';
+      this.renderTeamBuilder();
+      alert(`⚔️ Squad "${teamName}" saved and set as active team!`);
+    });
+  }
+
+  public openEditTeamModal(team: AxieTeam) {
+    this.editingTeamId = team.id;
+    this.modalActiveTab = 'squad';
+    this.mobileRoleFilter = 'all';
+    this.inventoryCurrentPage = 1;
+    this.inventoryClassFilter = 'all';
+
+    const modalTitle = document.getElementById('create-team-modal-title');
+    const inputTeamName = document.getElementById('input-team-name') as HTMLInputElement;
+    const createTeamModal = document.getElementById('create-team-modal');
+
+    if (modalTitle) modalTitle.textContent = `⚔️ Edit ${team.name}`;
+    if (inputTeamName) inputTeamName.value = team.name;
+
+    // Reset mobile role buttons
+    document.querySelectorAll('.mobile-role-btn').forEach((b, idx) => {
+      if (idx === 0) b.classList.add('active');
+      else b.classList.remove('active');
+    });
+
+    // Reset class chips
+    document.querySelectorAll('.class-filter-chip').forEach((c, idx) => {
+      if (idx === 0) c.classList.add('active');
+      else c.classList.remove('active');
+    });
+
+    // Reset view tabs
+    const tabSquad = document.getElementById('modal-tab-squad');
+    const tabInv = document.getElementById('modal-tab-inv');
+    const panelSquad = document.getElementById('panel-squad-formation');
+    const panelInv = document.getElementById('panel-inventory-roster');
+
+    tabSquad?.classList.add('active');
+    tabInv?.classList.remove('active');
+
+    if (window.innerWidth <= 900) {
+      if (panelSquad) panelSquad.style.display = 'flex';
+      if (panelInv) panelInv.style.display = 'none';
+    } else {
+      if (panelSquad) panelSquad.style.display = 'flex';
+      if (panelInv) panelInv.style.display = 'flex';
+    }
+
+    // Load squad map into working temp map
+    this.tempSquadMap.clear();
+    team.squadMap.forEach((role, axieId) => {
+      this.tempSquadMap.set(axieId, role);
+    });
+
+    this.renderCreateTeamModalState();
+    if (createTeamModal) createTeamModal.style.display = 'flex';
+  }
+
+  private applyMobileRoleFilter() {
+    const cols = document.querySelectorAll('.mini-role-col');
+    cols.forEach((col) => {
+      const el = col as HTMLElement;
+      const role = el.dataset.role;
+      if (this.mobileRoleFilter === 'all' || this.mobileRoleFilter === role) {
+        el.style.display = 'flex';
+      } else {
+        el.style.display = 'none';
+      }
+    });
+  }
+
+  private renderCreateTeamModalState() {
+    const totalCount = this.tempSquadMap.size;
+    const counterBadge = document.getElementById('create-team-counter-badge');
+    const footerHint = document.getElementById('modal-footer-hint');
+    const tabSquadCount = document.getElementById('tab-squad-count');
+
+    if (tabSquadCount) tabSquadCount.textContent = String(totalCount);
+
+    if (counterBadge) {
+      counterBadge.textContent = `Squad: ${totalCount} / 15 Axies`;
+      if (totalCount >= 15) {
+        counterBadge.style.background = 'rgba(255, 82, 82, 0.25)';
+        counterBadge.style.color = '#ff5252';
+      } else {
+        counterBadge.style.background = 'rgba(0, 240, 255, 0.15)';
+        counterBadge.style.color = 'var(--accent-cyan)';
+      }
+    }
+
+    if (footerHint) {
+      if (totalCount >= 15) {
+        footerHint.innerHTML = `<span style="color: #ff5252; font-weight: 700;">⚠️ Maximum 15 Axies reached! Remove an Axie to add another.</span>`;
+      } else {
+        footerHint.innerHTML = `<span>Squad size: <strong>${totalCount} / 15</strong> (${15 - totalCount} slots available).</span>`;
+      }
+    }
+
+    const defContainer = document.getElementById('create-team-def-list');
+    const offContainer = document.getElementById('create-team-off-list');
+    const neuContainer = document.getElementById('create-team-neu-list');
+
+    const defBadge = document.getElementById('count-def-badge');
+    const offBadge = document.getElementById('count-off-badge');
+    const neuBadge = document.getElementById('count-neu-badge');
+
+    const modalDefBadge = document.getElementById('modal-badge-def');
+    const modalOffBadge = document.getElementById('modal-badge-off');
+    const modalNeuBadge = document.getElementById('modal-badge-neu');
+
+    if (!defContainer || !offContainer || !neuContainer) return;
+
+    defContainer.innerHTML = '';
+    offContainer.innerHTML = '';
+    neuContainer.innerHTML = '';
+
+    let defCount = 0;
+    let offCount = 0;
+    let neuCount = 0;
+
+    const axies = this.teamManager.getPlayerAxies();
+
+    // Render assigned Axies in the 3 tactical formation columns WITH AXIE LOOKS
+    axies.forEach((axie) => {
+      const role = this.tempSquadMap.get(axie.id);
+      if (!role) return;
+
+      const portraitUrl = this.portraitCache.get(axie.id) || '';
+      const classTagClass = `tag-${axie.class.toLowerCase()}`;
+
+      const item = document.createElement('div');
+      item.className = 'mini-squad-item';
+
+      item.innerHTML = `
+        <div class="mini-item-thumb">
+          <img src="${portraitUrl}" alt="${axie.name}" style="${portraitUrl ? '' : 'display: none;'}" />
+          ${!portraitUrl ? `<span style="font-size: 0.7rem;">🐾</span>` : ''}
+        </div>
+        <div class="mini-item-info">
+          <span class="mini-item-name" title="${axie.name}">${axie.name}</span>
+          <span class="sample-class-tag ${classTagClass}" style="font-size: 0.62rem; padding: 0.02rem 0.25rem;">${axie.class}</span>
+        </div>
+        <button class="btn-remove-role" data-id="${axie.id}" title="Remove Axie from squad">✕</button>
+      `;
+
+      // Remove button handler
+      const btnRemove = item.querySelector('.btn-remove-role');
+      btnRemove?.addEventListener('click', () => {
+        this.tempSquadMap.delete(axie.id);
+        this.renderCreateTeamModalState();
+      });
+
+      if (role === 'Defense') {
+        defCount++;
+        defContainer.appendChild(item);
+      } else if (role === 'Offense') {
+        offCount++;
+        offContainer.appendChild(item);
+      } else {
+        neuCount++;
+        neuContainer.appendChild(item);
+      }
+    });
+
+    // Empty state messages if column is empty
+    if (defCount === 0) defContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 0.68rem; text-align: center; padding: 0.5rem 0;">Empty.<br/>+ Add from roster</div>';
+    if (offCount === 0) offContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 0.68rem; text-align: center; padding: 0.5rem 0;">Empty.<br/>+ Add from roster</div>';
+    if (neuCount === 0) neuContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 0.68rem; text-align: center; padding: 0.5rem 0;">Empty.<br/>+ Add from roster</div>';
+
+    if (defBadge) defBadge.textContent = String(defCount);
+    if (offBadge) offBadge.textContent = String(offCount);
+    if (neuBadge) neuBadge.textContent = String(neuCount);
+
+    if (modalDefBadge) modalDefBadge.textContent = `🟢 ${defCount} Def`;
+    if (modalOffBadge) modalOffBadge.textContent = `🔴 ${offCount} Off`;
+    if (modalNeuBadge) modalNeuBadge.textContent = `🔵 ${neuCount} Neu`;
+
+    this.applyMobileRoleFilter();
+    this.renderCreateTeamPickerGrid();
+  }
+
+  private renderCreateTeamPickerGrid() {
+    const container = document.getElementById('create-team-picker-grid');
+    const filterInput = document.getElementById('input-filter-picker') as HTMLInputElement;
+    const tabInvCount = document.getElementById('tab-inv-count');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    const filterTerm = filterInput ? filterInput.value.trim().toLowerCase() : '';
+    const axies = this.teamManager.getPlayerAxies();
+
+    if (tabInvCount) tabInvCount.textContent = String(axies.length);
+
+    let filteredAxies = axies;
+
+    // Class filter
+    if (this.inventoryClassFilter !== 'all') {
+      filteredAxies = filteredAxies.filter((a) => a.class.toLowerCase() === this.inventoryClassFilter.toLowerCase());
+    }
+
+    // Text search filter
+    if (filterTerm) {
+      filteredAxies = filteredAxies.filter(
+        (a) =>
+          a.name.toLowerCase().includes(filterTerm) ||
+          a.class.toLowerCase().includes(filterTerm) ||
+          a.id.toLowerCase().includes(filterTerm)
+      );
+    }
+
+    // Pagination calculation (ensures NO vertical scroll)
+    const totalPages = Math.max(1, Math.ceil(filteredAxies.length / this.inventoryPageSize));
+    if (this.inventoryCurrentPage > totalPages) this.inventoryCurrentPage = totalPages;
+    if (this.inventoryCurrentPage < 1) this.inventoryCurrentPage = 1;
+
+    const pageLabel = document.getElementById('inv-page-label');
+    if (pageLabel) pageLabel.textContent = `${this.inventoryCurrentPage}/${totalPages}`;
+
+    const btnPrev = document.getElementById('btn-inv-prev') as HTMLButtonElement;
+    const btnNext = document.getElementById('btn-inv-next') as HTMLButtonElement;
+    if (btnPrev) btnPrev.disabled = this.inventoryCurrentPage <= 1;
+    if (btnNext) btnNext.disabled = this.inventoryCurrentPage >= totalPages;
+
+    const startIndex = (this.inventoryCurrentPage - 1) * this.inventoryPageSize;
+    const pageAxies = filteredAxies.slice(startIndex, startIndex + this.inventoryPageSize);
+
+    const totalSelected = this.tempSquadMap.size;
+
+    if (pageAxies.length === 0) {
+      container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.75rem; grid-column: span 2; text-align: center; padding: 1rem 0;">No Axies found matching filter.</div>';
+      return;
+    }
+
+    // Render each inventory Axie with its portrait looks and Add/Remove buttons
+    pageAxies.forEach((axie) => {
+      const currentRole = this.tempSquadMap.get(axie.id);
+      const isAssigned = !!currentRole;
+      const portraitUrl = this.portraitCache.get(axie.id) || '';
+      const stats = calculateAxieClassicStats(axie.genes);
+      const classTagClass = `tag-${axie.class.toLowerCase()}`;
+
+      const item = document.createElement('div');
+      item.className = `picker-axie-item ${isAssigned ? 'assigned' : ''}`;
+
+      item.innerHTML = `
+        <div class="picker-thumb">
+          <img src="${portraitUrl}" alt="${axie.name}" style="${portraitUrl ? '' : 'display: none;'}" />
+          ${!portraitUrl ? `<span style="font-size: 0.7rem;">🐾</span>` : ''}
+        </div>
+
+        <div class="picker-info">
+          <div style="display: flex; align-items: center; gap: 0.25rem;">
+            <span class="picker-name" title="${axie.name}">${axie.name}</span>
+            <span class="sample-class-tag ${classTagClass}" style="font-size: 0.62rem; padding: 0.02rem 0.25rem;">${axie.class}</span>
+          </div>
+          <span class="picker-stats">HP ${stats.hp} | Spd ${stats.speed}</span>
+        </div>
+
+        <div class="picker-actions">
+          ${
+            isAssigned
+              ? `
+            <span class="role-assigned-indicator role-${currentRole.toLowerCase()}">${
+                  currentRole === 'Defense' ? '🟢 Def' : currentRole === 'Offense' ? '🔴 Off' : '🔵 Neu'
+                }</span>
+            <button class="btn-picker-remove btn-rem-${axie.id}" title="Remove from squad">✕</button>
+          `
+              : `
+            <div class="picker-add-btns">
+              <button class="btn-add-opt opt-def btn-add-def-${axie.id}" title="Add to Defense" ${totalSelected >= 15 ? 'disabled' : ''}>+Def</button>
+              <button class="btn-add-opt opt-off btn-add-off-${axie.id}" title="Add to Offense" ${totalSelected >= 15 ? 'disabled' : ''}>+Off</button>
+              <button class="btn-add-opt opt-neu btn-add-neu-${axie.id}" title="Add to Neutral" ${totalSelected >= 15 ? 'disabled' : ''}>+Neu</button>
+            </div>
+          `
+          }
+        </div>
+      `;
+
+      if (isAssigned) {
+        const btnRem = item.querySelector(`.btn-rem-${axie.id}`);
+        btnRem?.addEventListener('click', () => {
+          this.tempSquadMap.delete(axie.id);
+          this.renderCreateTeamModalState();
+        });
+      } else {
+        const btnDef = item.querySelector(`.btn-add-def-${axie.id}`);
+        const btnOff = item.querySelector(`.btn-add-off-${axie.id}`);
+        const btnNeu = item.querySelector(`.btn-add-neu-${axie.id}`);
+
+        const addRole = (role: TeamRole) => {
+          if (this.tempSquadMap.size >= 15) {
+            alert('⚠️ Squad is full! Maximum 15 Axies allowed per team.');
+            return;
+          }
+          this.tempSquadMap.set(axie.id, role);
+          this.renderCreateTeamModalState();
+        };
+
+        btnDef?.addEventListener('click', () => addRole('Defense'));
+        btnOff?.addEventListener('click', () => addRole('Offense'));
+        btnNeu?.addEventListener('click', () => addRole('Neutral'));
+      }
+
+      container.appendChild(item);
+    });
   }
 
   /* ==========================================================================
@@ -413,7 +871,8 @@ class AxieBattleGroundApp {
     AVAILABLE_ACCESSORIES.forEach((acc) => {
       const chk = document.getElementById(`acc-${acc.key}`) as HTMLInputElement;
       if (chk) {
-        chk.checked = this.equippedAccessoriesMap.has(acc.placement) &&
+        chk.checked =
+          this.equippedAccessoriesMap.has(acc.placement) &&
           this.equippedAccessoriesMap.get(acc.placement)?.key === acc.key;
       }
     });
@@ -579,7 +1038,7 @@ class AxieBattleGroundApp {
 
     if (modalImg) modalImg.src = card.imageUrl;
     if (modalSkill) modalSkill.textContent = `${card.skillName} (Energy: ${card.defaultEnergy})`;
-    if (modalPart) modalPart.textContent = `Part: ${card.partName} (${card.partType}) | Atk: ${card.defaultAttack} | Def: ${card.defaultDefense}`;
+    if (modalPart) modalPart.textContent = `Part: ${card.partName} (${card.partType}) | Atk: ${card.defaultAttack} | Def: ${card.defaultDefense})`;
     if (modalDesc) modalDesc.textContent = card.description;
 
     if (modal) modal.style.display = 'flex';
@@ -656,9 +1115,46 @@ class AxieBattleGroundApp {
   }
 
   /* ==========================================================================
-     AXIE DIRECTORY REAL AXIES (IDs 1-30) & LIGHTBOX MODAL
+     SEQUENTIAL AXIE PORTRAIT GENERATOR (PREVENTS RACE CONDITIONS)
      ========================================================================== */
-  private renderAxiesDirectory(filterTerm: string = '') {
+  private async getOrCreateAxiePortrait(axie: SampleAxie): Promise<string> {
+    if (this.portraitCache.has(axie.id)) {
+      return this.portraitCache.get(axie.id)!;
+    }
+
+    let offscreenCanvas = document.getElementById('portrait-offscreen-canvas') as HTMLCanvasElement;
+    if (!offscreenCanvas) {
+      offscreenCanvas = document.createElement('canvas');
+      offscreenCanvas.id = 'portrait-offscreen-canvas';
+      offscreenCanvas.width = 300;
+      offscreenCanvas.height = 240;
+      offscreenCanvas.style.display = 'none';
+      document.body.appendChild(offscreenCanvas);
+    }
+
+    if (!this.portraitEngine) {
+      this.portraitEngine = new AxieMixerEngine(offscreenCanvas);
+      await this.portraitEngine.initialize();
+    }
+
+    try {
+      await this.portraitEngine.loadAxieFromGenes(axie.genes, axie.accessories || []);
+      this.portraitEngine.setZoomScale(0.32);
+      this.portraitEngine.setAnimation('action/idle/normal', false);
+
+      const dataUrl = this.portraitEngine.exportCanvasSnapshot();
+      this.portraitCache.set(axie.id, dataUrl);
+      return dataUrl;
+    } catch (err) {
+      console.warn('Could not generate static portrait for Axie:', axie.id, err);
+      return '';
+    }
+  }
+
+  /* ==========================================================================
+     AXIE DIRECTORY REAL AXIES & LIGHTBOX MODAL
+     ========================================================================== */
+  private async renderAxiesDirectory(filterTerm: string = '') {
     const container = document.getElementById('axies-directory-grid');
     if (!container) return;
 
@@ -674,6 +1170,7 @@ class AxieBattleGroundApp {
         )
       : axies;
 
+    // Build DOM cards synchronously first
     filteredAxies.forEach((axie) => {
       const stats = calculateAxieClassicStats(axie.genes);
       const role = this.teamManager.getAxieRole(axie.id);
@@ -682,11 +1179,10 @@ class AxieBattleGroundApp {
       const cardEl = document.createElement('div');
       cardEl.className = 'axie-directory-card';
 
-      const imgSrc = axie.image || `https://assets.axieinfinity.com/axies/${axie.id}/axie/axie-full-transparent.png`;
-
       cardEl.innerHTML = `
         <div class="axie-portrait-container">
-          <img class="axie-portrait-img" src="${imgSrc}" alt="${axie.name}" loading="lazy" />
+          <img id="portrait-img-${axie.id}" class="axie-portrait-img" src="" alt="${axie.name}" style="opacity: 0; transition: opacity 0.3s;" />
+          <div id="portrait-spinner-${axie.id}" class="spinner" style="width: 24px; height: 24px; border-width: 2px;"></div>
         </div>
 
         <div class="axie-card-header">
@@ -713,6 +1209,18 @@ class AxieBattleGroundApp {
 
       container.appendChild(cardEl);
     });
+
+    // Sequentially render Spine snapshots ONE BY ONE to guarantee exact match with Lightbox
+    for (const axie of filteredAxies) {
+      const portraitDataUrl = await this.getOrCreateAxiePortrait(axie);
+      const img = document.getElementById(`portrait-img-${axie.id}`) as HTMLImageElement;
+      const spinner = document.getElementById(`portrait-spinner-${axie.id}`);
+      if (img && portraitDataUrl) {
+        img.src = portraitDataUrl;
+        img.style.opacity = '1';
+        if (spinner) spinner.style.display = 'none';
+      }
+    }
   }
 
   private async openAxieInspector(axie: SampleAxie) {
@@ -792,15 +1300,49 @@ class AxieBattleGroundApp {
   }
 
   /* ==========================================================================
-     TAB 2: TEAM BUILDER (Defense Green, Offense Red, Neutral Blue)
+     TAB 2: TEAM BUILDER (STRICT UNIFORM CARDS & MULTIPLE SQUAD PRESETS)
      ========================================================================== */
-  private renderTeamBuilder() {
+  private async renderTeamBuilder() {
+    const teamsBar = document.getElementById('created-teams-bar');
     const defContainer = document.getElementById('defense-squad-list');
     const offContainer = document.getElementById('offense-squad-list');
     const neuContainer = document.getElementById('neutral-squad-list');
     const summaryBadge = document.getElementById('team-summary-badge');
+    const colCountDef = document.getElementById('col-count-def');
+    const colCountOff = document.getElementById('col-count-off');
+    const colCountNeu = document.getElementById('col-count-neu');
 
     if (!defContainer || !offContainer || !neuContainer) return;
+
+    // Render Created Teams Selection Bar
+    if (teamsBar) {
+      teamsBar.innerHTML = '';
+      const teams = this.teamManager.getTeams();
+
+      teams.forEach((team) => {
+        const pill = document.createElement('div');
+        pill.className = `created-team-card-pill ${team.isActive ? 'active' : ''}`;
+
+        pill.innerHTML = `
+          <span class="created-team-title">⚔️ ${team.name}</span>
+          ${team.isActive ? '<span class="created-team-badge">ACTIVE SQUAD</span>' : ''}
+          <button class="btn-edit-team-pill" title="Edit squad team">✏️ Edit</button>
+        `;
+
+        pill.addEventListener('click', (e) => {
+          const target = e.target as HTMLElement;
+          if (target.classList.contains('btn-edit-team-pill')) {
+            e.stopPropagation();
+            this.openEditTeamModal(team);
+          } else {
+            this.teamManager.setActiveTeam(team.id);
+            this.renderTeamBuilder();
+          }
+        });
+
+        teamsBar.appendChild(pill);
+      });
+    }
 
     defContainer.innerHTML = '';
     offContainer.innerHTML = '';
@@ -811,28 +1353,65 @@ class AxieBattleGroundApp {
       summaryBadge.innerHTML = `<span>🟢 ${summary.defenseCount} Defense</span> | <span>🔴 ${summary.offenseCount} Offense</span> | <span>🔵 ${summary.neutralCount} Neutral</span>`;
     }
 
+    if (colCountDef) colCountDef.textContent = String(summary.defenseCount);
+    if (colCountOff) colCountOff.textContent = String(summary.offenseCount);
+    if (colCountNeu) colCountNeu.textContent = String(summary.neutralCount);
+
+    const activeTeam = this.teamManager.getActiveTeam();
     const axies = this.teamManager.getPlayerAxies();
 
+    let defCount = 0;
+    let offCount = 0;
+    let neuCount = 0;
+
+    // Render strictly uniform squad cards for active team squad
     axies.forEach((axie) => {
-      const role = this.teamManager.getAxieRole(axie.id);
+      const role = activeTeam.squadMap.get(axie.id);
+      if (!role) return; // Only display Axies assigned in active team squad
+
+      if (role === 'Defense') defCount++;
+      else if (role === 'Offense') offCount++;
+      else neuCount++;
+
+      const stats = calculateAxieClassicStats(axie.genes);
       const classTagClass = `tag-${axie.class.toLowerCase()}`;
+      const portraitDataUrl = this.portraitCache.get(axie.id) || '';
 
       const item = document.createElement('div');
       item.className = 'squad-axie-card';
 
       item.innerHTML = `
-        <div style="display: flex; flex-direction: column; gap: 0.2rem;">
-          <span style="font-weight: 700; font-size: 0.85rem;">${axie.name}</span>
-          <span class="sample-class-tag ${classTagClass}" style="width: fit-content;">${axie.class}</span>
+        <div class="squad-portrait-box" id="squad-portrait-box-${axie.id}">
+          <img id="squad-img-${axie.id}" class="squad-portrait-img" src="${portraitDataUrl}" alt="${axie.name}" style="${portraitDataUrl ? 'opacity: 1;' : 'opacity: 0;'}" />
+          <div id="squad-spinner-${axie.id}" class="spinner" style="width: 16px; height: 16px; border-width: 2px; ${portraitDataUrl ? 'display: none;' : ''}"></div>
         </div>
 
-        <select class="role-assign-select" data-id="${axie.id}">
-          <option value="Defense" ${role === 'Defense' ? 'selected' : ''}>🟢 Defense</option>
-          <option value="Offense" ${role === 'Offense' ? 'selected' : ''}>🔴 Offense</option>
-          <option value="Neutral" ${role === 'Neutral' ? 'selected' : ''}>🔵 Neutral</option>
-        </select>
+        <div class="squad-info">
+          <span class="squad-axie-name" title="${axie.name}">${axie.name}</span>
+          <div class="squad-meta-row">
+            <span class="sample-class-tag ${classTagClass}" style="font-size: 0.65rem; padding: 0.05rem 0.35rem;">${axie.class}</span>
+            <span style="color: var(--text-muted);">❤️ ${stats.hp} | ⚡ ${stats.speed}</span>
+          </div>
+        </div>
+
+        <div class="squad-card-actions">
+          <select class="role-assign-select" data-id="${axie.id}">
+            <option value="Defense" ${role === 'Defense' ? 'selected' : ''}>🟢 Def</option>
+            <option value="Offense" ${role === 'Offense' ? 'selected' : ''}>🔴 Off</option>
+            <option value="Neutral" ${role === 'Neutral' ? 'selected' : ''}>🔵 Neu</option>
+          </select>
+
+          <button class="btn-inspect-squad btn-inspect-${axie.id}" title="Inspect Axie & Cards">
+            🔍
+          </button>
+
+          <button class="btn-remove-squad btn-remove-${axie.id}" title="Remove Axie from squad">
+            ✕
+          </button>
+        </div>
       `;
 
+      // Role switcher dropdown
       const select = item.querySelector('select') as HTMLSelectElement;
       select.addEventListener('change', (e) => {
         const newRole = (e.target as HTMLSelectElement).value as TeamRole;
@@ -840,10 +1419,60 @@ class AxieBattleGroundApp {
         this.renderTeamBuilder();
       });
 
+      // Inspect Lightbox button
+      const btnInspect = item.querySelector(`.btn-inspect-${axie.id}`);
+      btnInspect?.addEventListener('click', () => {
+        this.openAxieInspector(axie);
+      });
+
+      const portraitBox = item.querySelector(`#squad-portrait-box-${axie.id}`);
+      portraitBox?.addEventListener('click', () => {
+        this.openAxieInspector(axie);
+      });
+
+      // Quick remove button directly from squad card
+      const btnRemove = item.querySelector(`.btn-remove-${axie.id}`);
+      btnRemove?.addEventListener('click', () => {
+        activeTeam.squadMap.delete(axie.id);
+        this.renderTeamBuilder();
+      });
+
       if (role === 'Defense') defContainer.appendChild(item);
       else if (role === 'Offense') offContainer.appendChild(item);
       else neuContainer.appendChild(item);
     });
+
+    // Add empty placeholder slots if squad has room
+    const totalSquad = defCount + offCount + neuCount;
+    if (totalSquad < 15) {
+      const appendPlaceholder = (container: HTMLElement, roleName: TeamRole) => {
+        const emptySlot = document.createElement('div');
+        emptySlot.className = 'squad-empty-slot';
+        emptySlot.innerHTML = `<span>➕ Add Axie to ${roleName}</span>`;
+        emptySlot.addEventListener('click', () => {
+          this.openEditTeamModal(activeTeam);
+        });
+        container.appendChild(emptySlot);
+      };
+
+      if (defCount < 5) appendPlaceholder(defContainer, 'Defense');
+      if (offCount < 5) appendPlaceholder(offContainer, 'Offense');
+      if (neuCount < 5) appendPlaceholder(neuContainer, 'Neutral');
+    }
+
+    // Ensure portraits are generated if any weren't cached yet
+    for (const axie of axies) {
+      if (activeTeam.squadMap.has(axie.id) && !this.portraitCache.has(axie.id)) {
+        const portraitDataUrl = await this.getOrCreateAxiePortrait(axie);
+        const img = document.getElementById(`squad-img-${axie.id}`) as HTMLImageElement;
+        const spinner = document.getElementById(`squad-spinner-${axie.id}`);
+        if (img && portraitDataUrl) {
+          img.src = portraitDataUrl;
+          img.style.opacity = '1';
+          if (spinner) spinner.style.display = 'none';
+        }
+      }
+    }
   }
 
   /* ==========================================================================
@@ -908,7 +1537,6 @@ class AxieBattleGroundApp {
     ];
 
     sampleLogs.forEach((log) => {
-      const item = document.getElementById('log-item');
       const div = document.createElement('div');
       div.className = 'log-item';
 
