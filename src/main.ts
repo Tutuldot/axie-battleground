@@ -26,12 +26,28 @@ class AxieBattleGroundApp {
   private tempSquadMap: Map<string, TeamRole> = new Map();
   private editingTeamId: string = 'team-1';
 
-  // Mobile / Responsive Modal state
-  private modalActiveTab: 'squad' | 'inventory' = 'squad';
-  private mobileRoleFilter: string = 'all';
-  private inventoryCurrentPage: number = 1;
-  private inventoryPageSize: number = 6;
-  private inventoryClassFilter: string = 'all';
+  // Dedicated Edit Team Page State (NO LIGHTBOX)
+  private editMobileActiveTab: 'squad' | 'inventory' = 'squad';
+  private editMobileRoleFilter: string = 'all';
+  private editInvCurrentPage: number = 1;
+  private editInvPageSize: number = 8;
+  private editInvClassFilter: string = 'all';
+
+  // Friends & Combat Hub State
+  private friendsFilter: string = 'all';
+  private friendsList = [
+    { id: 'f1', name: 'Jihoz_Axie', status: 'Online', rank: 'Challenger (2,450 MMR)', trophies: '🏆 2,450', winRate: '68%', wins: 520, favoriteAxie: 'SMG Token' },
+    { id: 'f2', name: 'Axie_Master_99', status: 'In Battle', rank: 'Grandmaster II (2,100 MMR)', trophies: '🏆 2,100', winRate: '64%', wins: 410, favoriteAxie: 'Tetrad' },
+    { id: 'f3', name: 'Ronin_Knight', status: 'Online', rank: 'Master I (1,920 MMR)', trophies: '🏆 1,920', winRate: '59%', wins: 345, favoriteAxie: 'BitQueen' },
+    { id: 'f4', name: 'Lunacia_Explorer', status: 'Offline', rank: 'Diamond II (1,650 MMR)', trophies: '🏆 1,650', winRate: '52%', wins: 215, favoriteAxie: 'Peaceful' },
+  ];
+  private battleLogsList = [
+    { mode: 'Ranked Arena', opponent: 'Jihoz_Axie', result: 'VICTORY (+32 MMR)', time: '10 mins ago', isWin: true },
+    { mode: 'Ranked Arena', opponent: 'Ronin_Knight', result: 'VICTORY (+28 MMR)', time: '42 mins ago', isWin: true },
+    { mode: 'Casual Practice', opponent: 'AI Commander', result: 'VICTORY', time: '2 hours ago', isWin: true },
+    { mode: 'Ranked Arena', opponent: 'Axie_Master_99', result: 'DEFEAT (-18 MMR)', time: '5 hours ago', isWin: false },
+    { mode: 'World Boss Raid', opponent: 'Chimera Behemoth', result: 'DEALT 45,000 DMG', time: '1 day ago', isWin: true },
+  ];
 
   constructor() {
     this.init();
@@ -42,11 +58,16 @@ class AxieBattleGroundApp {
     await loadCardAbilitiesDatabase();
 
     this.setupNavigation();
-    this.setupCreateTeamModal();
+    this.setupEditTeamPage();
+    this.setupTrainingGround();
+    this.setupBattleHub();
+    this.setupFriendsTab();
+    this.setupSettingsTab();
     this.renderSamplesList();
     this.renderAccessoriesList();
     this.renderAxiesDirectory();
     this.renderTeamBuilder();
+    this.renderBattleHub();
     this.renderFriendsList();
     this.renderBattleLogs();
 
@@ -63,43 +84,45 @@ class AxieBattleGroundApp {
     }
   }
 
-  private setupNavigation() {
+  private showPageView(viewId: 'landing' | 'dashboard' | 'studio' | 'edit-team' | 'training-ground') {
     const pageLanding = document.getElementById('page-landing');
     const pageDashboard = document.getElementById('page-dashboard');
     const pageStudio = document.getElementById('page-mixer-studio');
+    const pageEditTeam = document.getElementById('page-edit-team');
+    const pageTrainingGround = document.getElementById('page-training-ground');
 
+    if (pageLanding) pageLanding.style.display = viewId === 'landing' ? 'flex' : 'none';
+    if (pageDashboard) pageDashboard.style.display = viewId === 'dashboard' ? 'flex' : 'none';
+    if (pageStudio) pageStudio.style.display = viewId === 'studio' ? 'flex' : 'none';
+    if (pageEditTeam) pageEditTeam.style.display = viewId === 'edit-team' ? 'flex' : 'none';
+    if (pageTrainingGround) pageTrainingGround.style.display = viewId === 'training-ground' ? 'flex' : 'none';
+  }
+
+  private setupNavigation() {
     // Landing Screen -> Start Game
     const btnStartGame = document.getElementById('btn-start-game');
     btnStartGame?.addEventListener('click', () => {
-      if (pageLanding) pageLanding.style.display = 'none';
-      if (pageDashboard) pageDashboard.style.display = 'flex';
-      if (pageStudio) pageStudio.style.display = 'none';
+      this.showPageView('dashboard');
     });
 
     // Landing Screen -> Mixer Studio
     const btnLandingMixer = document.getElementById('btn-landing-mixer');
     btnLandingMixer?.addEventListener('click', async () => {
-      if (pageLanding) pageLanding.style.display = 'none';
-      if (pageDashboard) pageDashboard.style.display = 'none';
-      if (pageStudio) pageStudio.style.display = 'flex';
-
+      this.showPageView('studio');
       await this.initStudioMode();
     });
 
     // Dashboard Header -> Mixer Studio
     const btnOpenMixerStudio = document.getElementById('btn-open-mixer-studio');
     btnOpenMixerStudio?.addEventListener('click', async () => {
-      if (pageDashboard) pageDashboard.style.display = 'none';
-      if (pageStudio) pageStudio.style.display = 'flex';
-
+      this.showPageView('studio');
       await this.initStudioMode();
     });
 
     // Studio Header -> Back to Game
     const btnBackToGame = document.getElementById('btn-back-to-game');
     btnBackToGame?.addEventListener('click', () => {
-      if (pageStudio) pageStudio.style.display = 'none';
-      if (pageDashboard) pageDashboard.style.display = 'flex';
+      this.showPageView('dashboard');
     });
 
     // Top Navigation Tabs
@@ -123,6 +146,10 @@ class AxieBattleGroundApp {
 
         if (contentId === 'tab-content-team') {
           this.renderTeamBuilder();
+        } else if (contentId === 'tab-content-battle') {
+          this.renderBattleHub();
+        } else if (contentId === 'tab-content-friends') {
+          this.renderFriendsList();
         }
       });
     });
@@ -154,8 +181,6 @@ class AxieBattleGroundApp {
         if (jsonModal) jsonModal.style.display = 'none';
         const battleLogsModal = document.getElementById('battle-logs-modal');
         if (battleLogsModal) battleLogsModal.style.display = 'none';
-        const createTeamModal = document.getElementById('create-team-modal');
-        if (createTeamModal) createTeamModal.style.display = 'none';
       }
     });
 
@@ -163,44 +188,51 @@ class AxieBattleGroundApp {
   }
 
   /* ==========================================================================
-     CREATE / EDIT CUSTOM TEAM MODAL LOGIC (NO-SCROLL MOBILE COMPATIBLE)
+     PAGE 4: DEDICATED FULL-SCREEN TEAM BUILDER & SQUAD EDITOR (NOT A LIGHTBOX)
      ========================================================================== */
-  private setupCreateTeamModal() {
+  private setupEditTeamPage() {
+    const btnBack = document.getElementById('btn-back-from-edit-team');
+    const btnSave = document.getElementById('btn-save-edit-page');
     const btnCreateTeam = document.getElementById('btn-create-team');
-    const createTeamModal = document.getElementById('create-team-modal');
-    const btnCloseCreateTeam = document.getElementById('btn-close-create-team');
-    const btnCancelCreateTeam = document.getElementById('btn-cancel-create-team');
-    const btnSaveCustomTeam = document.getElementById('btn-save-custom-team');
-    const inputFilterPicker = document.getElementById('input-filter-picker') as HTMLInputElement;
 
     btnCreateTeam?.addEventListener('click', () => {
       const newTeam = this.teamManager.createNewTeam(`Custom Squad #${this.teamManager.getTeams().length + 1}`);
-      this.openEditTeamModal(newTeam);
+      this.openEditTeamPage(newTeam);
     });
 
-    btnCloseCreateTeam?.addEventListener('click', () => {
-      if (createTeamModal) createTeamModal.style.display = 'none';
+    btnBack?.addEventListener('click', () => {
+      this.showPageView('dashboard');
+      this.renderTeamBuilder();
     });
 
-    btnCancelCreateTeam?.addEventListener('click', () => {
-      if (createTeamModal) createTeamModal.style.display = 'none';
+    btnSave?.addEventListener('click', () => {
+      const inputTeamName = document.getElementById('edit-page-team-name') as HTMLInputElement;
+      const teamName = inputTeamName ? inputTeamName.value.trim() : 'Custom Squad';
+
+      if (this.tempSquadMap.size === 0) {
+        alert('⚠️ Please add at least 1 Axie to your squad before saving!');
+        return;
+      }
+
+      this.teamManager.saveTeam(this.editingTeamId, teamName || 'Custom Squad', this.tempSquadMap);
+      this.teamManager.setActiveTeam(this.editingTeamId);
+
+      this.showPageView('dashboard');
+      this.renderTeamBuilder();
+      alert(`⚔️ Squad "${teamName}" saved and set as active team!`);
     });
 
-    createTeamModal?.addEventListener('click', (e) => {
-      if (e.target === createTeamModal) createTeamModal.style.display = 'none';
-    });
+    // Mobile tabs switcher (Squad Formation vs Inventory Roster)
+    const tabSquad = document.getElementById('edit-tab-btn-squad');
+    const tabInv = document.getElementById('edit-tab-btn-inventory');
+    const btnMobileGotoInv = document.getElementById('btn-edit-mobile-goto-inv');
 
-    // Mobile view switch buttons
-    const tabSquad = document.getElementById('modal-tab-squad');
-    const tabInv = document.getElementById('modal-tab-inv');
-    const btnMobileGotoInv = document.getElementById('btn-mobile-goto-inv');
+    const switchEditTab = (tab: 'squad' | 'inventory') => {
+      this.editMobileActiveTab = tab;
+      const panelSquad = document.getElementById('edit-squad-panel');
+      const panelInv = document.getElementById('edit-inventory-panel');
 
-    const switchModalView = (view: 'squad' | 'inventory') => {
-      this.modalActiveTab = view;
-      const panelSquad = document.getElementById('panel-squad-formation');
-      const panelInv = document.getElementById('panel-inventory-roster');
-
-      if (view === 'squad') {
+      if (tab === 'squad') {
         tabSquad?.classList.add('active');
         tabInv?.classList.remove('active');
         if (panelSquad) panelSquad.style.display = 'flex';
@@ -213,46 +245,46 @@ class AxieBattleGroundApp {
       }
     };
 
-    tabSquad?.addEventListener('click', () => switchModalView('squad'));
-    tabInv?.addEventListener('click', () => switchModalView('inventory'));
-    btnMobileGotoInv?.addEventListener('click', () => switchModalView('inventory'));
+    tabSquad?.addEventListener('click', () => switchEditTab('squad'));
+    tabInv?.addEventListener('click', () => switchEditTab('inventory'));
+    btnMobileGotoInv?.addEventListener('click', () => switchEditTab('inventory'));
 
     window.addEventListener('resize', () => {
-      const panelSquad = document.getElementById('panel-squad-formation');
-      const panelInv = document.getElementById('panel-inventory-roster');
+      const panelSquad = document.getElementById('edit-squad-panel');
+      const panelInv = document.getElementById('edit-inventory-panel');
       if (window.innerWidth > 900) {
         if (panelSquad) panelSquad.style.display = 'flex';
         if (panelInv) panelInv.style.display = 'flex';
       } else {
-        switchModalView(this.modalActiveTab);
+        switchEditTab(this.editMobileActiveTab);
       }
     });
 
-    // Mobile role selector buttons
-    const roleBtns = document.querySelectorAll('.mobile-role-btn');
-    roleBtns.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        roleBtns.forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.mobileRoleFilter = (btn as HTMLElement).dataset.filter || 'all';
-        this.applyMobileRoleFilter();
+    // Mobile role filter chips
+    const roleChips = document.querySelectorAll('.edit-role-filter-chip');
+    roleChips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        roleChips.forEach((c) => c.classList.remove('active'));
+        chip.classList.add('active');
+        this.editMobileRoleFilter = (chip as HTMLElement).dataset.role || 'all';
+        this.applyEditMobileRoleFilter();
       });
     });
 
-    // Inventory pagination controls
-    const btnInvPrev = document.getElementById('btn-inv-prev');
-    const btnInvNext = document.getElementById('btn-inv-next');
+    // Inventory pagination buttons
+    const btnPrev = document.getElementById('edit-btn-inv-prev');
+    const btnNext = document.getElementById('edit-btn-inv-next');
 
-    btnInvPrev?.addEventListener('click', () => {
-      if (this.inventoryCurrentPage > 1) {
-        this.inventoryCurrentPage--;
-        this.renderCreateTeamPickerGrid();
+    btnPrev?.addEventListener('click', () => {
+      if (this.editInvCurrentPage > 1) {
+        this.editInvCurrentPage--;
+        this.renderEditInventoryGrid();
       }
     });
 
-    btnInvNext?.addEventListener('click', () => {
-      this.inventoryCurrentPage++;
-      this.renderCreateTeamPickerGrid();
+    btnNext?.addEventListener('click', () => {
+      this.editInvCurrentPage++;
+      this.renderEditInventoryGrid();
     });
 
     // Inventory class filter chips
@@ -261,54 +293,36 @@ class AxieBattleGroundApp {
       chip.addEventListener('click', () => {
         classChips.forEach((c) => c.classList.remove('active'));
         chip.classList.add('active');
-        this.inventoryClassFilter = (chip as HTMLElement).dataset.class || 'all';
-        this.inventoryCurrentPage = 1;
-        this.renderCreateTeamPickerGrid();
+        this.editInvClassFilter = (chip as HTMLElement).dataset.class || 'all';
+        this.editInvCurrentPage = 1;
+        this.renderEditInventoryGrid();
       });
     });
 
-    inputFilterPicker?.addEventListener('input', () => {
-      this.inventoryCurrentPage = 1;
-      this.renderCreateTeamPickerGrid();
-    });
-
-    btnSaveCustomTeam?.addEventListener('click', () => {
-      const inputTeamName = document.getElementById('input-team-name') as HTMLInputElement;
-      const teamName = inputTeamName ? inputTeamName.value.trim() : 'Custom Squad';
-
-      if (this.tempSquadMap.size === 0) {
-        alert('⚠️ Please add at least 1 Axie to your squad before saving!');
-        return;
-      }
-
-      // Save team in TeamManager
-      this.teamManager.saveTeam(this.editingTeamId, teamName || 'Custom Squad', this.tempSquadMap);
-      this.teamManager.setActiveTeam(this.editingTeamId);
-
-      if (createTeamModal) createTeamModal.style.display = 'none';
-      this.renderTeamBuilder();
-      alert(`⚔️ Squad "${teamName}" saved and set as active team!`);
+    const searchInput = document.getElementById('edit-inv-search') as HTMLInputElement;
+    searchInput?.addEventListener('input', () => {
+      this.editInvCurrentPage = 1;
+      this.renderEditInventoryGrid();
     });
   }
 
-  public openEditTeamModal(team: AxieTeam) {
+  public openEditTeamPage(team: AxieTeam) {
     this.editingTeamId = team.id;
-    this.modalActiveTab = 'squad';
-    this.mobileRoleFilter = 'all';
-    this.inventoryCurrentPage = 1;
-    this.inventoryClassFilter = 'all';
+    this.editMobileActiveTab = 'squad';
+    this.editMobileRoleFilter = 'all';
+    this.editInvCurrentPage = 1;
+    this.editInvClassFilter = 'all';
 
-    const modalTitle = document.getElementById('create-team-modal-title');
-    const inputTeamName = document.getElementById('input-team-name') as HTMLInputElement;
-    const createTeamModal = document.getElementById('create-team-modal');
+    const pageTitle = document.getElementById('edit-page-title');
+    const inputTeamName = document.getElementById('edit-page-team-name') as HTMLInputElement;
 
-    if (modalTitle) modalTitle.textContent = `⚔️ Edit ${team.name}`;
+    if (pageTitle) pageTitle.textContent = `⚔️ Edit Squad: ${team.name}`;
     if (inputTeamName) inputTeamName.value = team.name;
 
     // Reset mobile role buttons
-    document.querySelectorAll('.mobile-role-btn').forEach((b, idx) => {
-      if (idx === 0) b.classList.add('active');
-      else b.classList.remove('active');
+    document.querySelectorAll('.edit-role-filter-chip').forEach((c, idx) => {
+      if (idx === 0) c.classList.add('active');
+      else c.classList.remove('active');
     });
 
     // Reset class chips
@@ -317,11 +331,17 @@ class AxieBattleGroundApp {
       else c.classList.remove('active');
     });
 
-    // Reset view tabs
-    const tabSquad = document.getElementById('modal-tab-squad');
-    const tabInv = document.getElementById('modal-tab-inv');
-    const panelSquad = document.getElementById('panel-squad-formation');
-    const panelInv = document.getElementById('panel-inventory-roster');
+    // Load squad map into working temp map
+    this.tempSquadMap.clear();
+    team.squadMap.forEach((role, axieId) => {
+      this.tempSquadMap.set(axieId, role);
+    });
+
+    // Reset view panels
+    const tabSquad = document.getElementById('edit-tab-btn-squad');
+    const tabInv = document.getElementById('edit-tab-btn-inventory');
+    const panelSquad = document.getElementById('edit-squad-panel');
+    const panelInv = document.getElementById('edit-inventory-panel');
 
     tabSquad?.classList.add('active');
     tabInv?.classList.remove('active');
@@ -334,22 +354,16 @@ class AxieBattleGroundApp {
       if (panelInv) panelInv.style.display = 'flex';
     }
 
-    // Load squad map into working temp map
-    this.tempSquadMap.clear();
-    team.squadMap.forEach((role, axieId) => {
-      this.tempSquadMap.set(axieId, role);
-    });
-
-    this.renderCreateTeamModalState();
-    if (createTeamModal) createTeamModal.style.display = 'flex';
+    this.showPageView('edit-team');
+    this.renderEditTeamPageState();
   }
 
-  private applyMobileRoleFilter() {
-    const cols = document.querySelectorAll('.mini-role-col');
+  private applyEditMobileRoleFilter() {
+    const cols = document.querySelectorAll('.edit-role-col');
     cols.forEach((col) => {
       const el = col as HTMLElement;
       const role = el.dataset.role;
-      if (this.mobileRoleFilter === 'all' || this.mobileRoleFilter === role) {
+      if (this.editMobileRoleFilter === 'all' || this.editMobileRoleFilter === role) {
         el.style.display = 'flex';
       } else {
         el.style.display = 'none';
@@ -357,16 +371,15 @@ class AxieBattleGroundApp {
     });
   }
 
-  private renderCreateTeamModalState() {
+  private renderEditTeamPageState() {
     const totalCount = this.tempSquadMap.size;
-    const counterBadge = document.getElementById('create-team-counter-badge');
-    const footerHint = document.getElementById('modal-footer-hint');
-    const tabSquadCount = document.getElementById('tab-squad-count');
+    const counterBadge = document.getElementById('edit-page-counter-badge');
+    const mobSquadCount = document.getElementById('edit-mob-squad-count');
+    const mobInvCount = document.getElementById('edit-mob-inv-count');
 
-    if (tabSquadCount) tabSquadCount.textContent = String(totalCount);
-
+    if (mobSquadCount) mobSquadCount.textContent = String(totalCount);
     if (counterBadge) {
-      counterBadge.textContent = `Squad: ${totalCount} / 15 Axies`;
+      counterBadge.textContent = `Squad: ${totalCount} / 15`;
       if (totalCount >= 15) {
         counterBadge.style.background = 'rgba(255, 82, 82, 0.25)';
         counterBadge.style.color = '#ff5252';
@@ -376,25 +389,17 @@ class AxieBattleGroundApp {
       }
     }
 
-    if (footerHint) {
-      if (totalCount >= 15) {
-        footerHint.innerHTML = `<span style="color: #ff5252; font-weight: 700;">⚠️ Maximum 15 Axies reached! Remove an Axie to add another.</span>`;
-      } else {
-        footerHint.innerHTML = `<span>Squad size: <strong>${totalCount} / 15</strong> (${15 - totalCount} slots available).</span>`;
-      }
-    }
+    const defContainer = document.getElementById('edit-list-defense');
+    const offContainer = document.getElementById('edit-list-offense');
+    const neuContainer = document.getElementById('edit-list-neutral');
 
-    const defContainer = document.getElementById('create-team-def-list');
-    const offContainer = document.getElementById('create-team-off-list');
-    const neuContainer = document.getElementById('create-team-neu-list');
+    const defCountBadge = document.getElementById('edit-count-def');
+    const offCountBadge = document.getElementById('edit-count-off');
+    const neuCountBadge = document.getElementById('edit-count-neu');
 
-    const defBadge = document.getElementById('count-def-badge');
-    const offBadge = document.getElementById('count-off-badge');
-    const neuBadge = document.getElementById('count-neu-badge');
-
-    const modalDefBadge = document.getElementById('modal-badge-def');
-    const modalOffBadge = document.getElementById('modal-badge-off');
-    const modalNeuBadge = document.getElementById('modal-badge-neu');
+    const badgeDef = document.getElementById('edit-badge-def');
+    const badgeOff = document.getElementById('edit-badge-off');
+    const badgeNeu = document.getElementById('edit-badge-neu');
 
     if (!defContainer || !offContainer || !neuContainer) return;
 
@@ -407,6 +412,7 @@ class AxieBattleGroundApp {
     let neuCount = 0;
 
     const axies = this.teamManager.getPlayerAxies();
+    if (mobInvCount) mobInvCount.textContent = String(axies.length);
 
     // Render assigned Axies in the 3 tactical formation columns WITH AXIE LOOKS
     axies.forEach((axie) => {
@@ -417,25 +423,25 @@ class AxieBattleGroundApp {
       const classTagClass = `tag-${axie.class.toLowerCase()}`;
 
       const item = document.createElement('div');
-      item.className = 'mini-squad-item';
+      item.className = 'edit-squad-item';
 
       item.innerHTML = `
-        <div class="mini-item-thumb">
+        <div class="edit-item-thumb">
           <img src="${portraitUrl}" alt="${axie.name}" style="${portraitUrl ? '' : 'display: none;'}" />
-          ${!portraitUrl ? `<span style="font-size: 0.7rem;">🐾</span>` : ''}
+          ${!portraitUrl ? `<span style="font-size: 0.8rem;">🐾</span>` : ''}
         </div>
-        <div class="mini-item-info">
-          <span class="mini-item-name" title="${axie.name}">${axie.name}</span>
-          <span class="sample-class-tag ${classTagClass}" style="font-size: 0.62rem; padding: 0.02rem 0.25rem;">${axie.class}</span>
+        <div class="edit-item-info">
+          <span class="edit-item-name" title="${axie.name}">${axie.name}</span>
+          <span class="sample-class-tag ${classTagClass}" style="font-size: 0.65rem; padding: 0.05rem 0.35rem;">${axie.class}</span>
         </div>
-        <button class="btn-remove-role" data-id="${axie.id}" title="Remove Axie from squad">✕</button>
+        <button class="btn-remove-role-chip" data-id="${axie.id}" title="Remove Axie from squad">✕</button>
       `;
 
       // Remove button handler
-      const btnRemove = item.querySelector('.btn-remove-role');
+      const btnRemove = item.querySelector('.btn-remove-role-chip');
       btnRemove?.addEventListener('click', () => {
         this.tempSquadMap.delete(axie.id);
-        this.renderCreateTeamModalState();
+        this.renderEditTeamPageState();
       });
 
       if (role === 'Defense') {
@@ -450,77 +456,85 @@ class AxieBattleGroundApp {
       }
     });
 
-    // Empty state messages if column is empty
-    if (defCount === 0) defContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 0.68rem; text-align: center; padding: 0.5rem 0;">Empty.<br/>+ Add from roster</div>';
-    if (offCount === 0) offContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 0.68rem; text-align: center; padding: 0.5rem 0;">Empty.<br/>+ Add from roster</div>';
-    if (neuCount === 0) neuContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 0.68rem; text-align: center; padding: 0.5rem 0;">Empty.<br/>+ Add from roster</div>';
+    // Add empty placeholder slots if squad has room
+    const appendSlot = (container: HTMLElement, roleName: TeamRole) => {
+      const emptySlot = document.createElement('div');
+      emptySlot.className = 'edit-squad-empty-slot';
+      emptySlot.innerHTML = `<span>➕ Add Axie to ${roleName}</span>`;
+      emptySlot.addEventListener('click', () => {
+        // Switch to inventory
+        const tabInv = document.getElementById('edit-tab-btn-inventory');
+        tabInv?.click();
+      });
+      container.appendChild(emptySlot);
+    };
 
-    if (defBadge) defBadge.textContent = String(defCount);
-    if (offBadge) offBadge.textContent = String(offCount);
-    if (neuBadge) neuBadge.textContent = String(neuCount);
+    if (defCount === 0) appendSlot(defContainer, 'Defense');
+    if (offCount === 0) appendSlot(offContainer, 'Offense');
+    if (neuCount === 0) appendSlot(neuContainer, 'Neutral');
 
-    if (modalDefBadge) modalDefBadge.textContent = `🟢 ${defCount} Def`;
-    if (modalOffBadge) modalOffBadge.textContent = `🔴 ${offCount} Off`;
-    if (modalNeuBadge) modalNeuBadge.textContent = `🔵 ${neuCount} Neu`;
+    if (defCountBadge) defCountBadge.textContent = String(defCount);
+    if (offCountBadge) offCountBadge.textContent = String(offCount);
+    if (neuCountBadge) neuCountBadge.textContent = String(neuCount);
 
-    this.applyMobileRoleFilter();
-    this.renderCreateTeamPickerGrid();
+    if (badgeDef) badgeDef.textContent = `🟢 ${defCount} Def`;
+    if (badgeOff) badgeOff.textContent = `🔴 ${offCount} Off`;
+    if (badgeNeu) badgeNeu.textContent = `🔵 ${neuCount} Neu`;
+
+    this.applyEditMobileRoleFilter();
+    this.renderEditInventoryGrid();
   }
 
-  private renderCreateTeamPickerGrid() {
-    const container = document.getElementById('create-team-picker-grid');
-    const filterInput = document.getElementById('input-filter-picker') as HTMLInputElement;
-    const tabInvCount = document.getElementById('tab-inv-count');
+  private renderEditInventoryGrid() {
+    const container = document.getElementById('edit-inventory-grid');
+    const searchInput = document.getElementById('edit-inv-search') as HTMLInputElement;
     if (!container) return;
 
     container.innerHTML = '';
 
-    const filterTerm = filterInput ? filterInput.value.trim().toLowerCase() : '';
+    const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
     const axies = this.teamManager.getPlayerAxies();
-
-    if (tabInvCount) tabInvCount.textContent = String(axies.length);
 
     let filteredAxies = axies;
 
     // Class filter
-    if (this.inventoryClassFilter !== 'all') {
-      filteredAxies = filteredAxies.filter((a) => a.class.toLowerCase() === this.inventoryClassFilter.toLowerCase());
+    if (this.editInvClassFilter !== 'all') {
+      filteredAxies = filteredAxies.filter((a) => a.class.toLowerCase() === this.editInvClassFilter.toLowerCase());
     }
 
-    // Text search filter
-    if (filterTerm) {
+    // Search filter
+    if (searchTerm) {
       filteredAxies = filteredAxies.filter(
         (a) =>
-          a.name.toLowerCase().includes(filterTerm) ||
-          a.class.toLowerCase().includes(filterTerm) ||
-          a.id.toLowerCase().includes(filterTerm)
+          a.name.toLowerCase().includes(searchTerm) ||
+          a.class.toLowerCase().includes(searchTerm) ||
+          a.id.toLowerCase().includes(searchTerm)
       );
     }
 
-    // Pagination calculation (ensures NO vertical scroll)
-    const totalPages = Math.max(1, Math.ceil(filteredAxies.length / this.inventoryPageSize));
-    if (this.inventoryCurrentPage > totalPages) this.inventoryCurrentPage = totalPages;
-    if (this.inventoryCurrentPage < 1) this.inventoryCurrentPage = 1;
+    // Pagination
+    const totalPages = Math.max(1, Math.ceil(filteredAxies.length / this.editInvPageSize));
+    if (this.editInvCurrentPage > totalPages) this.editInvCurrentPage = totalPages;
+    if (this.editInvCurrentPage < 1) this.editInvCurrentPage = 1;
 
-    const pageLabel = document.getElementById('inv-page-label');
-    if (pageLabel) pageLabel.textContent = `${this.inventoryCurrentPage}/${totalPages}`;
+    const pageLabel = document.getElementById('edit-inv-page-label');
+    if (pageLabel) pageLabel.textContent = `${this.editInvCurrentPage}/${totalPages}`;
 
-    const btnPrev = document.getElementById('btn-inv-prev') as HTMLButtonElement;
-    const btnNext = document.getElementById('btn-inv-next') as HTMLButtonElement;
-    if (btnPrev) btnPrev.disabled = this.inventoryCurrentPage <= 1;
-    if (btnNext) btnNext.disabled = this.inventoryCurrentPage >= totalPages;
+    const btnPrev = document.getElementById('edit-btn-inv-prev') as HTMLButtonElement;
+    const btnNext = document.getElementById('edit-btn-inv-next') as HTMLButtonElement;
+    if (btnPrev) btnPrev.disabled = this.editInvCurrentPage <= 1;
+    if (btnNext) btnNext.disabled = this.editInvCurrentPage >= totalPages;
 
-    const startIndex = (this.inventoryCurrentPage - 1) * this.inventoryPageSize;
-    const pageAxies = filteredAxies.slice(startIndex, startIndex + this.inventoryPageSize);
+    const startIndex = (this.editInvCurrentPage - 1) * this.editInvPageSize;
+    const pageAxies = filteredAxies.slice(startIndex, startIndex + this.editInvPageSize);
 
     const totalSelected = this.tempSquadMap.size;
 
     if (pageAxies.length === 0) {
-      container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.75rem; grid-column: span 2; text-align: center; padding: 1rem 0;">No Axies found matching filter.</div>';
+      container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem; grid-column: span 2; text-align: center; padding: 2rem 0;">No Axies found matching filter.</div>';
       return;
     }
 
-    // Render each inventory Axie with its portrait looks and Add/Remove buttons
     pageAxies.forEach((axie) => {
       const currentRole = this.tempSquadMap.get(axie.id);
       const isAssigned = !!currentRole;
@@ -528,24 +542,24 @@ class AxieBattleGroundApp {
       const stats = calculateAxieClassicStats(axie.genes);
       const classTagClass = `tag-${axie.class.toLowerCase()}`;
 
-      const item = document.createElement('div');
-      item.className = `picker-axie-item ${isAssigned ? 'assigned' : ''}`;
+      const card = document.createElement('div');
+      card.className = `edit-picker-card ${isAssigned ? 'assigned' : ''}`;
 
-      item.innerHTML = `
-        <div class="picker-thumb">
+      card.innerHTML = `
+        <div class="edit-picker-thumb">
           <img src="${portraitUrl}" alt="${axie.name}" style="${portraitUrl ? '' : 'display: none;'}" />
-          ${!portraitUrl ? `<span style="font-size: 0.7rem;">🐾</span>` : ''}
+          ${!portraitUrl ? `<span style="font-size: 0.8rem;">🐾</span>` : ''}
         </div>
 
-        <div class="picker-info">
-          <div style="display: flex; align-items: center; gap: 0.25rem;">
-            <span class="picker-name" title="${axie.name}">${axie.name}</span>
-            <span class="sample-class-tag ${classTagClass}" style="font-size: 0.62rem; padding: 0.02rem 0.25rem;">${axie.class}</span>
+        <div class="edit-picker-info">
+          <div style="display: flex; align-items: center; gap: 0.3rem;">
+            <span class="edit-picker-name" title="${axie.name}">${axie.name}</span>
+            <span class="sample-class-tag ${classTagClass}" style="font-size: 0.65rem; padding: 0.05rem 0.3rem;">${axie.class}</span>
           </div>
-          <span class="picker-stats">HP ${stats.hp} | Spd ${stats.speed}</span>
+          <span class="edit-picker-stats">❤️ HP ${stats.hp} | ⚡ Spd ${stats.speed}</span>
         </div>
 
-        <div class="picker-actions">
+        <div class="edit-picker-actions">
           ${
             isAssigned
               ? `
@@ -566,15 +580,15 @@ class AxieBattleGroundApp {
       `;
 
       if (isAssigned) {
-        const btnRem = item.querySelector(`.btn-rem-${axie.id}`);
+        const btnRem = card.querySelector(`.btn-rem-${axie.id}`);
         btnRem?.addEventListener('click', () => {
           this.tempSquadMap.delete(axie.id);
-          this.renderCreateTeamModalState();
+          this.renderEditTeamPageState();
         });
       } else {
-        const btnDef = item.querySelector(`.btn-add-def-${axie.id}`);
-        const btnOff = item.querySelector(`.btn-add-off-${axie.id}`);
-        const btnNeu = item.querySelector(`.btn-add-neu-${axie.id}`);
+        const btnDef = card.querySelector(`.btn-add-def-${axie.id}`);
+        const btnOff = card.querySelector(`.btn-add-off-${axie.id}`);
+        const btnNeu = card.querySelector(`.btn-add-neu-${axie.id}`);
 
         const addRole = (role: TeamRole) => {
           if (this.tempSquadMap.size >= 15) {
@@ -582,7 +596,7 @@ class AxieBattleGroundApp {
             return;
           }
           this.tempSquadMap.set(axie.id, role);
-          this.renderCreateTeamModalState();
+          this.renderEditTeamPageState();
         };
 
         btnDef?.addEventListener('click', () => addRole('Defense'));
@@ -590,7 +604,7 @@ class AxieBattleGroundApp {
         btnNeu?.addEventListener('click', () => addRole('Neutral'));
       }
 
-      container.appendChild(item);
+      container.appendChild(card);
     });
   }
 
@@ -1333,7 +1347,7 @@ class AxieBattleGroundApp {
           const target = e.target as HTMLElement;
           if (target.classList.contains('btn-edit-team-pill')) {
             e.stopPropagation();
-            this.openEditTeamModal(team);
+            this.openEditTeamPage(team);
           } else {
             this.teamManager.setActiveTeam(team.id);
             this.renderTeamBuilder();
@@ -1450,7 +1464,7 @@ class AxieBattleGroundApp {
         emptySlot.className = 'squad-empty-slot';
         emptySlot.innerHTML = `<span>➕ Add Axie to ${roleName}</span>`;
         emptySlot.addEventListener('click', () => {
-          this.openEditTeamModal(activeTeam);
+          this.openEditTeamPage(activeTeam);
         });
         container.appendChild(emptySlot);
       };
@@ -1476,48 +1490,595 @@ class AxieBattleGroundApp {
   }
 
   /* ==========================================================================
-     TAB 4: FRIENDS LIST
+     TAB 3: BATTLE HUB & TACTICAL AUTO-COMBAT
      ========================================================================== */
+  private setupBattleHub() {
+    const btnEditSquad = document.getElementById('btn-battle-edit-squad');
+    btnEditSquad?.addEventListener('click', () => {
+      const activeTeam = this.teamManager.getActiveTeam();
+      this.openEditTeamPage(activeTeam);
+    });
+
+    const btnRanked = document.getElementById('btn-queue-ranked');
+    const btnCasual = document.getElementById('btn-queue-casual');
+    const btnRaid = document.getElementById('btn-queue-raid');
+
+    btnRanked?.addEventListener('click', () => {
+      this.openMatchmakingModal('Competitive Ranked PVP (15v15)', true);
+    });
+
+    btnCasual?.addEventListener('click', () => {
+      this.openTrainingGround();
+    });
+
+    btnRaid?.addEventListener('click', () => {
+      this.openMatchmakingModal('Chimera Behemoth World Boss Raid (Lv. 60)', false);
+    });
+
+    const btnCloseMatchmaking = document.getElementById('btn-close-matchmaking');
+    const btnCancelQueue = document.getElementById('btn-cancel-queue');
+    const modalMatchmaking = document.getElementById('matchmaking-modal');
+
+    const closeQueue = () => {
+      if (modalMatchmaking) modalMatchmaking.style.display = 'none';
+    };
+
+    btnCloseMatchmaking?.addEventListener('click', closeQueue);
+    btnCancelQueue?.addEventListener('click', closeQueue);
+
+    const btnStartBattle = document.getElementById('btn-start-arena-battle');
+    btnStartBattle?.addEventListener('click', () => {
+      closeQueue();
+
+      // Record a victory in logs
+      this.battleLogsList.unshift({
+        mode: 'Ranked Arena (15v15)',
+        opponent: 'RoninKnight_X',
+        result: 'VICTORY (+32 MMR)',
+        time: 'Just now',
+        isWin: true,
+      });
+
+      this.renderBattleLogs();
+      this.renderBattleHub();
+
+      // Launch Side-Scrolling Forest Arena!
+      this.openTrainingGround();
+    });
+
+    const btnOpenFullLogs = document.getElementById('btn-open-battle-logs');
+    const modalLogs = document.getElementById('battle-logs-modal');
+    const btnCloseLogs = document.getElementById('btn-close-battle-logs');
+
+    btnOpenFullLogs?.addEventListener('click', () => {
+      if (modalLogs) modalLogs.style.display = 'flex';
+      this.renderBattleLogs();
+    });
+
+    btnCloseLogs?.addEventListener('click', () => {
+      if (modalLogs) modalLogs.style.display = 'none';
+    });
+  }
+
+  private openMatchmakingModal(modeTitle: string, isRanked: boolean) {
+    const modal = document.getElementById('matchmaking-modal');
+    const searchPhase = document.getElementById('match-search-phase');
+    const foundPhase = document.getElementById('match-found-phase');
+    const titleText = document.getElementById('matchmaking-status-text');
+    const subText = document.getElementById('matchmaking-subtext');
+    const oppName = document.getElementById('opponent-vs-name');
+    const oppMmr = document.getElementById('opponent-vs-mmr');
+
+    if (!modal || !searchPhase || !foundPhase) return;
+
+    searchPhase.style.display = 'flex';
+    foundPhase.style.display = 'none';
+
+    if (titleText) titleText.textContent = isRanked ? 'Searching for Ranked Opponent...' : 'Searching for Arena Match...';
+    if (subText) subText.textContent = `Mode: ${modeTitle} • Scanning 1,800 - 1,900 MMR Commanders`;
+
+    modal.style.display = 'flex';
+
+    // Simulate match finding after 1.8s
+    setTimeout(() => {
+      if (modal.style.display !== 'none') {
+        searchPhase.style.display = 'none';
+        foundPhase.style.display = 'flex';
+
+        const sampleOpponents = [
+          { name: 'RoninKnight_X', mmr: 1865 },
+          { name: 'Jihoz_Challenger', mmr: 1890 },
+          { name: 'AxieStorm_99', mmr: 1840 },
+          { name: 'LunaciaLegend', mmr: 1875 },
+        ];
+        const randomOpp = sampleOpponents[Math.floor(Math.random() * sampleOpponents.length)];
+
+        if (oppName) oppName.textContent = randomOpp.name;
+        if (oppMmr) oppMmr.textContent = `${randomOpp.mmr} MMR`;
+      }
+    }, 1800);
+  }
+
+  private renderBattleHub() {
+    const activeTeam = this.teamManager.getActiveTeam();
+    const teamNameBadge = document.getElementById('battle-active-team-name');
+    const heroTitle = document.getElementById('hero-squad-title');
+    const heroStats = document.getElementById('hero-squad-stats');
+    const heroPortraits = document.getElementById('hero-squad-portraits');
+
+    if (teamNameBadge) teamNameBadge.textContent = activeTeam.name;
+    if (heroTitle) heroTitle.textContent = activeTeam.name;
+
+    const summary = this.teamManager.getSquadSummary();
+    if (heroStats) {
+      heroStats.innerHTML = `
+        <span class="badge badge-def">🟢 ${summary.defenseCount} Defense (Tanks)</span>
+        <span class="badge badge-off">🔴 ${summary.offenseCount} Offense (DPS)</span>
+        <span class="badge badge-neu">🔵 ${summary.neutralCount} Neutral (Support)</span>
+      `;
+    }
+
+    // Render up to 5 mini visual portraits of the active squad
+    if (heroPortraits) {
+      heroPortraits.innerHTML = '';
+      const axies = this.teamManager.getPlayerAxies();
+      const squadAxies = axies.filter((a) => activeTeam.squadMap.has(a.id)).slice(0, 5);
+
+      squadAxies.forEach((axie) => {
+        const portraitUrl = this.portraitCache.get(axie.id) || '';
+        const miniEl = document.createElement('div');
+        miniEl.className = 'hero-mini-portrait';
+        miniEl.title = `${axie.name} (${axie.class})`;
+
+        miniEl.innerHTML = `
+          <img src="${portraitUrl}" alt="${axie.name}" style="${portraitUrl ? '' : 'display: none;'}" />
+          ${!portraitUrl ? `<span style="font-size: 0.85rem;">🐾</span>` : ''}
+        `;
+
+        heroPortraits.appendChild(miniEl);
+      });
+    }
+
+    // Render Recent Combat History list
+    const logsList = document.getElementById('battle-recent-logs-list');
+    if (logsList) {
+      logsList.innerHTML = '';
+      const recent3 = this.battleLogsList.slice(0, 3);
+
+      recent3.forEach((log) => {
+        const row = document.createElement('div');
+        row.className = 'recent-log-card';
+
+        row.innerHTML = `
+          <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+            <span class="log-mode-name">⚔️ ${log.mode} vs <strong>${log.opponent}</strong></span>
+            <span class="log-meta-sub">${log.time}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span class="log-tag ${log.isWin ? 'win' : 'loss'}">${log.result}</span>
+            <button class="btn btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.72rem; border-color: var(--accent-cyan); color: var(--accent-cyan);" title="Watch Battle Replay">🎬 Replay</button>
+          </div>
+        `;
+
+        const btnReplay = row.querySelector('button');
+        btnReplay?.addEventListener('click', () => {
+          alert(`🎬 Loading Replay against ${log.opponent} in Lunacia Arena...`);
+        });
+
+        logsList.appendChild(row);
+      });
+    }
+  }
+
+  /* ==========================================================================
+     TAB 4: FRIENDS & GUILD COMMAND
+     ========================================================================== */
+  private setupFriendsTab() {
+    const filterBtns = document.querySelectorAll('.friends-filter-btn');
+    filterBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        filterBtns.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.friendsFilter = (btn as HTMLElement).dataset.filter || 'all';
+        this.renderFriendsList();
+      });
+    });
+
+    const searchInput = document.getElementById('input-friends-search') as HTMLInputElement;
+    searchInput?.addEventListener('input', () => {
+      this.renderFriendsList();
+    });
+
+    const btnOpenAddFriend = document.getElementById('btn-add-friend-modal');
+    const modalAddFriend = document.getElementById('add-friend-modal');
+    const btnCloseAddFriend = document.getElementById('btn-close-add-friend');
+    const btnSubmitAddFriend = document.getElementById('btn-submit-add-friend');
+
+    btnOpenAddFriend?.addEventListener('click', () => {
+      if (modalAddFriend) modalAddFriend.style.display = 'flex';
+    });
+
+    btnCloseAddFriend?.addEventListener('click', () => {
+      if (modalAddFriend) modalAddFriend.style.display = 'none';
+    });
+
+    btnSubmitAddFriend?.addEventListener('click', () => {
+      const input = document.getElementById('input-new-friend-name') as HTMLInputElement;
+      const name = input ? input.value.trim() : '';
+      if (!name) {
+        alert('Please enter a valid friend username or Ronin address.');
+        return;
+      }
+
+      this.friendsList.unshift({
+        id: `f-${Date.now()}`,
+        name: name,
+        status: 'Online',
+        rank: 'Gold I (1,450 MMR)',
+        trophies: '🏆 1,450',
+        winRate: '54%',
+        wins: 120,
+        favoriteAxie: 'SMG Token',
+      });
+
+      if (input) input.value = '';
+      if (modalAddFriend) modalAddFriend.style.display = 'none';
+      this.renderFriendsList();
+      alert(`🎉 Friend request sent to "${name}"!`);
+    });
+  }
+
   private renderFriendsList() {
     const container = document.getElementById('friends-list-container');
+    const searchInput = document.getElementById('input-friends-search') as HTMLInputElement;
     if (!container) return;
 
     container.innerHTML = '';
 
-    const sampleFriends = [
-      { name: 'Jihoz_Axie', status: 'Online', rank: 'Challenger (2,450 MMR)', trophies: '🏆 2,450' },
-      { name: 'Axie_Master_99', status: 'In Battle', rank: 'Grandmaster (2,100 MMR)', trophies: '🏆 2,100' },
-      { name: 'Ronin_Knight', status: 'Online', rank: 'Master I (1,920 MMR)', trophies: '🏆 1,920' },
-      { name: 'Lunacia_Explorer', status: 'Offline', rank: 'Diamond II (1,650 MMR)', trophies: '🏆 1,650' },
-    ];
+    const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
 
-    sampleFriends.forEach((friend) => {
+    let filtered = this.friendsList;
+
+    if (this.friendsFilter !== 'all') {
+      filtered = filtered.filter((f) => f.status.toLowerCase() === this.friendsFilter.toLowerCase());
+    }
+
+    if (searchTerm) {
+      filtered = filtered.filter((f) => f.name.toLowerCase().includes(searchTerm));
+    }
+
+    if (filtered.length === 0) {
+      container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem; grid-column: 1 / -1; text-align: center; padding: 2rem 0;">No friends found matching criteria.</div>';
+      return;
+    }
+
+    filtered.forEach((friend) => {
       const card = document.createElement('div');
-      card.className = 'friend-card';
+      card.className = 'friend-enhanced-card';
 
-      const statusColor = friend.status === 'Offline' ? '#94a3b8' : '#00e676';
+      const statusDotClass =
+        friend.status === 'Online'
+          ? 'status-online'
+          : friend.status === 'In Battle'
+          ? 'status-battle'
+          : 'status-offline';
 
       card.innerHTML = `
-        <div style="display: flex; flex-direction: column; gap: 0.2rem;">
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <span style="width: 8px; height: 8px; border-radius: 50%; background: ${statusColor};"></span>
-            <span style="font-weight: 700; font-size: 0.95rem;">${friend.name}</span>
+        <div class="friend-card-top">
+          <div class="friend-avatar-wrap">
+            <span>🛡️</span>
+            <span class="friend-status-dot ${statusDotClass}"></span>
           </div>
-          <span style="font-size: 0.78rem; color: var(--text-secondary);">${friend.rank}</span>
+
+          <div class="friend-info-col">
+            <span class="friend-name" title="${friend.name}">${friend.name}</span>
+            <span class="friend-status-text">${friend.status} • ${friend.rank}</span>
+          </div>
         </div>
 
-        <button class="btn btn-sm" style="border-color: var(--accent-cyan); color: var(--accent-cyan);">
-          ⚔️ Challenge
-        </button>
+        <div class="friend-stats-bar">
+          <span style="color: var(--text-muted);">Win Rate: <strong style="color: var(--accent-cyan);">${friend.winRate}</strong></span>
+          <span style="color: var(--text-muted);">Trophies: <strong style="color: var(--accent-gold);">${friend.trophies}</strong></span>
+        </div>
+
+        <div class="friend-actions-row">
+          <button class="btn btn-sm btn-challenge-${friend.id}" style="flex: 1; border-color: var(--accent-cyan); color: var(--accent-cyan); font-weight: 700;">
+            ⚔️ Duel (15v15)
+          </button>
+          ${
+            friend.status === 'In Battle'
+              ? `<button class="btn btn-sm btn-spectate-${friend.id}" style="border-color: var(--accent-gold); color: var(--accent-gold);">👀 Spectate</button>`
+              : `<button class="btn btn-sm btn-msg-${friend.id}" style="border-color: var(--border-color); color: var(--text-secondary);">💬 Chat</button>`
+          }
+        </div>
       `;
 
-      const btnChallenge = card.querySelector('button');
-      btnChallenge?.addEventListener('click', () => {
-        alert(`⚔️ Challenge invitation sent to ${friend.name}! Waiting for acceptance...`);
+      const btnDuel = card.querySelector(`.btn-challenge-${friend.id}`);
+      btnDuel?.addEventListener('click', () => {
+        alert(`⚔️ 15v15 Tactical Duel challenge sent to ${friend.name}! Waiting for their response...`);
+      });
+
+      const btnSpectate = card.querySelector(`.btn-spectate-${friend.id}`);
+      btnSpectate?.addEventListener('click', () => {
+        alert(`👀 Spectating ${friend.name}'s active 15v15 Arena match!`);
+      });
+
+      const btnMsg = card.querySelector(`.btn-msg-${friend.id}`);
+      btnMsg?.addEventListener('click', () => {
+        const msg = prompt(`Send direct message to ${friend.name}:`);
+        if (msg) alert(`📨 Message sent to ${friend.name}: "${msg}"`);
       });
 
       container.appendChild(card);
     });
+  }
+
+  /* ==========================================================================
+     TAB 5: GAME SETTINGS & PREFERENCES
+     ========================================================================== */
+  private setupSettingsTab() {
+    // Sliders live readout
+    const bindSlider = (sliderId: string, badgeId: string) => {
+      const slider = document.getElementById(sliderId) as HTMLInputElement;
+      const badge = document.getElementById(badgeId);
+      slider?.addEventListener('input', () => {
+        if (badge) badge.textContent = `${slider.value}%`;
+      });
+    };
+
+    bindSlider('slider-audio-master', 'val-audio-master');
+    bindSlider('slider-audio-bgm', 'val-audio-bgm');
+    bindSlider('slider-audio-sfx', 'val-audio-sfx');
+
+    // Resolution pill selector
+    const resPills = document.querySelectorAll('#group-resolution .setting-pill');
+    resPills.forEach((pill) => {
+      pill.addEventListener('click', () => {
+        resPills.forEach((p) => p.classList.remove('active'));
+        pill.classList.add('active');
+      });
+    });
+
+    // Battle speed selector
+    const speedPills = document.querySelectorAll('#group-battle-speed .setting-pill');
+    speedPills.forEach((pill) => {
+      pill.addEventListener('click', () => {
+        speedPills.forEach((p) => p.classList.remove('active'));
+        pill.classList.add('active');
+      });
+    });
+
+    // Save settings button
+    const btnSave = document.getElementById('btn-save-settings');
+    btnSave?.addEventListener('click', () => {
+      alert('💾 Game settings, audio acoustics, and Spine 2D graphics preferences saved successfully!');
+    });
+
+    // Clear cache button
+    const btnClearCache = document.getElementById('btn-clear-cache');
+    btnClearCache?.addEventListener('click', () => {
+      this.portraitCache.clear();
+      alert('🧹 Asset texture and Spine 2D portrait cache cleared!');
+    });
+
+    // Reset data button
+    const btnResetData = document.getElementById('btn-reset-data');
+    btnResetData?.addEventListener('click', () => {
+      if (confirm('Are you sure you want to reset all squads to default lineups?')) {
+        localStorage.clear();
+        this.teamManager = new TeamManager();
+        this.renderTeamBuilder();
+        this.renderBattleHub();
+        alert('🔄 Squad lineups have been reset to initial factory presets.');
+      }
+    });
+  }
+
+  /* ==========================================================================
+     PAGE 5: SIDE-SCROLLING FOREST TRAINING GROUND (3,200px ARENA)
+     ========================================================================== */
+  private isArenaPanning: boolean = false;
+  private arenaPanStartX: number = 0;
+  private arenaPanScrollLeft: number = 0;
+
+  private setupTrainingGround() {
+    const btnExit = document.getElementById('btn-exit-training-ground');
+    btnExit?.addEventListener('click', () => {
+      this.showPageView('dashboard');
+      // Set active tab to battle
+      const tabBattle = document.getElementById('tab-btn-battle');
+      tabBattle?.click();
+    });
+
+    const viewport = document.getElementById('arena-world-viewport') as HTMLElement;
+    const minimap = document.getElementById('arena-minimap') as HTMLElement;
+    const minimapViewport = document.getElementById('arena-minimap-viewport') as HTMLElement;
+    const camMeterText = document.getElementById('arena-camera-meter-text');
+
+    if (!viewport) return;
+
+    // Helper: update minimap camera box & meter text
+    const updateMinimapAndMeter = () => {
+      const maxScroll = viewport.scrollWidth - viewport.clientWidth;
+      if (maxScroll <= 0) return;
+
+      const currentScroll = viewport.scrollLeft;
+      const scrollPct = currentScroll / maxScroll;
+      const camMeters = Math.round((currentScroll / maxScroll) * 9600);
+
+      // Determine active section (1 to 7)
+      let currentSectionName = 'SEC 1 • West Base';
+      let activeSecIdx = 0;
+      if (camMeters < 1370) {
+        currentSectionName = 'SEC 1 • West Base Command';
+        activeSecIdx = 0;
+      } else if (camMeters < 2740) {
+        currentSectionName = 'SEC 2 • West Mag-Lev Transit';
+        activeSecIdx = 1;
+      } else if (camMeters < 4110) {
+        currentSectionName = 'SEC 3 • West Forward Frontier';
+        activeSecIdx = 2;
+      } else if (camMeters <= 5490) {
+        currentSectionName = '💠 SEC 4 • Central Quantum Core';
+        activeSecIdx = 3;
+      } else if (camMeters < 6860) {
+        currentSectionName = 'SEC 5 • East Mech Foundry';
+        activeSecIdx = 4;
+      } else if (camMeters < 8230) {
+        currentSectionName = 'SEC 6 • East Glitch Wastes';
+        activeSecIdx = 5;
+      } else {
+        currentSectionName = 'SEC 7 • East Chimera Megaplex';
+        activeSecIdx = 6;
+      }
+
+      // Update active state of 7 section buttons
+      const jumpButtons = document.querySelectorAll('.btn-sec-jump');
+      jumpButtons.forEach((btn, idx) => {
+        if (idx === activeSecIdx) btn.classList.add('active');
+        else btn.classList.remove('active');
+      });
+
+      // Width of camera box in percentage of minimap
+      const viewportWidthRatio = Math.min(1, viewport.clientWidth / viewport.scrollWidth);
+      const minimapBoxWidthPct = Math.max(5, viewportWidthRatio * 100);
+
+      // Left position in minimap
+      const maxMinimapLeft = 100 - minimapBoxWidthPct;
+      const minimapLeftPct = scrollPct * maxMinimapLeft;
+
+      if (minimapViewport) {
+        minimapViewport.style.width = `${minimapBoxWidthPct}%`;
+        minimapViewport.style.left = `${Math.max(0, Math.min(100 - minimapBoxWidthPct, minimapLeftPct))}%`;
+      }
+
+      if (camMeterText) {
+        camMeterText.textContent = `${currentSectionName} • Camera: ${camMeters.toLocaleString()}m / 9,600m`;
+      }
+    };
+
+    // Viewport scroll listener
+    viewport.addEventListener('scroll', () => {
+      updateMinimapAndMeter();
+    });
+
+    // 1. Mouse Drag Panning
+    viewport.addEventListener('mousedown', (e) => {
+      // Don't pan if clicking an interactive button
+      if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.btn-sec-jump')) {
+        return;
+      }
+      this.isArenaPanning = true;
+      this.arenaPanStartX = e.pageX - viewport.offsetLeft;
+      this.arenaPanScrollLeft = viewport.scrollLeft;
+    });
+
+    window.addEventListener('mouseup', () => {
+      this.isArenaPanning = false;
+    });
+
+    viewport.addEventListener('mousemove', (e) => {
+      if (!this.isArenaPanning) return;
+      e.preventDefault();
+      const x = e.pageX - viewport.offsetLeft;
+      const walk = (x - this.arenaPanStartX) * 1.5;
+      viewport.scrollLeft = this.arenaPanScrollLeft - walk;
+    });
+
+    // 2. Touch Panning for Mobile
+    let touchStartX = 0;
+    let touchScrollLeft = 0;
+
+    viewport.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].pageX - viewport.offsetLeft;
+      touchScrollLeft = viewport.scrollLeft;
+    }, { passive: true });
+
+    viewport.addEventListener('touchmove', (e) => {
+      const x = e.touches[0].pageX - viewport.offsetLeft;
+      const walk = (x - touchStartX) * 1.5;
+      viewport.scrollLeft = touchScrollLeft - walk;
+    }, { passive: true });
+
+    // 3. Minimap Click / Drag to Jump Camera
+    let isMinimapDragging = false;
+
+    const handleMinimapJump = (e: MouseEvent) => {
+      const rect = minimap.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const pct = Math.max(0, Math.min(1, clickX / rect.width));
+      const maxScroll = viewport.scrollWidth - viewport.clientWidth;
+      viewport.scrollTo({
+        left: pct * maxScroll,
+        behavior: 'smooth',
+      });
+    };
+
+    minimap?.addEventListener('click', (e) => {
+      handleMinimapJump(e);
+    });
+
+    minimapViewport?.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      isMinimapDragging = true;
+    });
+
+    window.addEventListener('mouseup', () => {
+      isMinimapDragging = false;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isMinimapDragging || !minimap) return;
+      const rect = minimap.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const pct = Math.max(0, Math.min(1, clickX / rect.width));
+      const maxScroll = viewport.scrollWidth - viewport.clientWidth;
+      viewport.scrollLeft = pct * maxScroll;
+    });
+
+    // 4. Quick Jump Buttons (7 Sections: West 1-3, Central Core, East 5-7)
+    const secJumpBtns = document.querySelectorAll('.btn-sec-jump');
+    secJumpBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const targetX = parseInt((btn as HTMLElement).dataset.pos || '0', 10);
+        const targetScroll = Math.max(0, Math.min(viewport.scrollWidth - viewport.clientWidth, targetX - (viewport.clientWidth / 2)));
+        viewport.scrollTo({ left: targetScroll, behavior: 'smooth' });
+      });
+    });
+
+    // 5. Bottom Pan Arrow Nav Buttons
+    const btnPanLeft = document.getElementById('btn-pan-left-arrow');
+    const btnPanRight = document.getElementById('btn-pan-right-arrow');
+
+    btnPanLeft?.addEventListener('click', () => {
+      viewport.scrollBy({ left: -650, behavior: 'smooth' });
+    });
+
+    btnPanRight?.addEventListener('click', () => {
+      viewport.scrollBy({ left: 650, behavior: 'smooth' });
+    });
+  }
+
+  public openTrainingGround() {
+    this.showPageView('training-ground');
+    this.renderStationedAxiesInArena();
+
+    const viewport = document.getElementById('arena-world-viewport');
+    if (viewport) {
+      // Start centered on the arena (4,800m Central Core)
+      setTimeout(() => {
+        const centerPos = (viewport.scrollWidth - viewport.clientWidth) / 2;
+        viewport.scrollTo({ left: centerPos, behavior: 'smooth' });
+      }, 60);
+    }
+  }
+
+  private renderStationedAxiesInArena() {
+    // Axies removed from the map for now per user instruction
+    const container = document.getElementById('arena-stationed-axies-container');
+    if (container) {
+      container.innerHTML = '';
+    }
   }
 
   /* ==========================================================================
@@ -1529,20 +2090,13 @@ class AxieBattleGroundApp {
 
     container.innerHTML = '';
 
-    const sampleLogs = [
-      { mode: 'Ranked Arena', opponent: 'Jihoz_Axie', result: 'VICTORY (+32 MMR)', time: '10 mins ago', isWin: true },
-      { mode: 'Ranked Arena', opponent: 'Ronin_Knight', result: 'VICTORY (+28 MMR)', time: '42 mins ago', isWin: true },
-      { mode: 'Casual Practice', opponent: 'AI Commander', result: 'VICTORY', time: '2 hours ago', isWin: true },
-      { mode: 'Ranked Arena', opponent: 'Axie_Master_99', result: 'DEFEAT (-18 MMR)', time: '5 hours ago', isWin: false },
-    ];
-
-    sampleLogs.forEach((log) => {
+    this.battleLogsList.forEach((log) => {
       const div = document.createElement('div');
       div.className = 'log-item';
 
       div.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 0.2rem;">
-          <span style="font-weight: 700; font-size: 0.9rem;">${log.mode} vs ${log.opponent}</span>
+          <span style="font-weight: 700; font-size: 0.9rem;">${log.mode} vs <strong>${log.opponent}</strong></span>
           <span style="font-size: 0.75rem; color: var(--text-muted);">${log.time}</span>
         </div>
         <span class="log-result ${log.isWin ? 'win' : 'loss'}">${log.result}</span>

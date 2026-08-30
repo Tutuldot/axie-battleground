@@ -1,43 +1,43 @@
-# Axie Battle Ground & Axie Mixer Studio - No-Scroll Mobile-Compatible Squad Editor
+# Axie Battle Ground & Axie Mixer Studio - 7-Section Partitioned Cyberpunk Arena
 
-A tactical side-scrolling auto-battle game layout and 2D Spine mixer featuring **Axie Spine 2D animations, Axie Classic Stats, authentic Axie Classic Card UI, Uniform 3-Column Team Builder, and No-Scroll Mobile-Compatible Team Editor with Visible Axie Looks**.
-
-![User Mobile Edit Modal Issue](/Users/anthonyestrada/.gemini/antigravity/brain/1e9369fa-b598-4a98-95e9-896567bf6e5b/.user_uploaded/media_1788111330583.png)
+A tactical side-scrolling auto-battle game layout and 2D Spine mixer featuring **Axie Spine 2D animations, Axie Classic Stats, authentic Axie Classic Card UI, Uniform 3-Column Team Builder, Dedicated Full-Page Squad Editor, Premium Battle Hub, and the 9,600m Cyberpunk 2077 // Neo-Lunacia Arena Divided into 7 Clean Tactical Sections**.
 
 ---
 
-## 📱 1. 100% Mobile Compatible & Zero Horizontal Cutoffs
-- **Root Cause of Previous Issue**: In `media_1788111330583.png`, having both the 3-column squad formation and the inventory roster forced side-by-side required over 850px of width. On mobile viewports (~375px–480px), this squeezed the modal, causing the Neutral column and the entire inventory panel to be pushed off-screen to the right with awkward scrollbars.
-- **The Mobile Solution**:
-  - Added a responsive **View Switcher** for mobile & compact viewports:
-    - **`[ 🛡️ Squad Formation (13/15) ]`**: Full-width squad management with role filter pills (`[ All Roles ]`, `[ 🟢 Def ]`, `[ 🔴 Off ]`, `[ 🔵 Neu ]`).
-    - **`[ ➕ Add Axies Roster ]`**: Full-width inventory management with 1-tap add/remove buttons.
-  - Sized with responsive percentages so **content never overflows or clips outside the screen**.
+## 🗺️ 1. Division into 7 Clear Tactical Sections (West vs East + Center Core)
+To make it effortless for players to determine their exact map location and navigate the 9,600m world, the arena is divided into **7 distinct labeled sectors**:
+
+| Section | Territory | Range (Meters) | Tactical Description |
+| :--- | :--- | :--- | :--- |
+| **SECTOR 01** | **West Side** (Ronin) | `0m — 1,370m` | **West Base Command**: Player Citadel Spire, Quantum Matrix summon circle, perimeter defense |
+| **SECTOR 02** | **West Side** (Ronin) | `1,370m — 2,740m` | **West Mag-Lev Transit**: High-speed magnetic rail corridors, elevated neon skywalks |
+| **SECTOR 03** | **West Side** (Ronin) | `2,740m — 4,110m` | **West Forward Frontier**: Outpost forward defense grid, industrial mag-decks |
+| **SECTOR 04** | **Center** (Contested) | `4,110m — 5,490m` | **💠 Central Quantum Core**: Contested focal hub under the rotating celestial wireframe moon (`4,800m`) |
+| **SECTOR 05** | **East Side** (Chimera) | `5,490m — 6,860m` | **East Mech Foundry**: Megacorp industrial foundry, conduit conduits |
+| **SECTOR 06** | **East Side** (Chimera) | `6,860m — 8,230m` | **East Glitch Wastes**: Corrupted data ravines, dark web antenna arrays |
+| **SECTOR 07** | **East Side** (Chimera) | `8,230m — 9,600m` | **East Chimera Megaplex**: Enemy Syndicate AI citadel, biohazard core, dark web rift gate |
 
 ---
 
-## 🚫 2. Zero Scrolling Needed (Fits 100% on Screen)
-- **Compact Card Dimensions**:
-  - Squad cards reduced to an ultra-sleek `38px` height with `32px` Axie portraits, class badge, and red `✕` remove button.
-  - Inventory cards reduced to `48px` height with `36px` Axie portraits, HP/Speed stats, and `+Def`, `+Off`, `+Neu` buttons.
-- **Inventory Pagination & Class Filter Chips**:
-  - Paginated at 6 Axies per page (`◀ 1/5 ▶`) with class filter chips (`All`, `Aqua`, `Beast`, `Plant`, `Bird`, `Rep`, `Bug`).
-  - Completely eliminates endless vertical scrolling: everything fits comfortably on mobile screens (even a 667px iPhone SE) and desktop screens alike!
+## 🏷️ 2. Clean Platform Geometry (Step Labels Removed)
+- **All step text labels removed**: Every platform badge (e.g. `L1 • MAG-LEV RAILWAY`, `L2 • HIGH-VOLTAGE POWERWAY`, `🌟 L2 • GRAND QUANTUM APEX LOOKOUT`) has been removed.
+- **Clean Ground Highway**: The cluttered text line on the ground floor has been removed.
+- **Preserved Aesthetic**: The platforms retain their sleek cyberpunk geometry, glowing neon underglow, magnetic levitation rails, and support legs without distracting text on the steps.
 
 ---
 
-## 💻 3. Seamless Desktop Experience
-- On desktop screens (>= 900px), both the **Active Squad Formation** (3 columns) and the **Inventory Roster** are shown side-by-side simultaneously within a fixed `max-height: 88vh` viewport with zero page scrolling.
+## 🐾 3. Axies Removed From Map For Now
+- The stationed units across the platforms and ground floor have been cleared, leaving an unobstructed, clean view of the 7-section battle arena layout.
 
 ---
 
-## How to Test
-
-1. Open **`http://localhost:3000/`** in your browser.
-2. Click **🛡️ Team Builder** in the top navigation.
-3. Click **✏️ Edit** on any squad (or **➕ Create New Team**).
-4. Test in both desktop width and mobile responsive mode (press `Cmd + Option + I`, toggle Device Toolbar in Chrome DevTools to iPhone 12/14):
-   - Notice the segmented view switch: `🛡️ Squad Formation` and `➕ Add Axies Roster`.
-   - Notice the role filter pills: `All Roles`, `🟢 Def`, `🔴 Off`, `🔵 Neu`.
-   - Notice all 3 columns fit without clipping or horizontal overflow.
-   - Notice the pagination (`◀ 1/5 ▶`) keeps the entire screen visible with **no need for scrolling**!
+## 🧭 4. 7-Section Navigation & Minimap Controls
+- **Minimap 7-Grid Partition**:
+  - The top minimap radar displays 7 distinct visual sector partitions (`SEC 1` to `SEC 7`) with cyan (West), gold (Center), and pink/magenta (East) styling.
+- **Direct 7-Section Jump Buttons**:
+  - `[ S1 ]` `[ S2 ]` `[ S3 ]` `[ 💠 CORE ]` `[ S5 ]` `[ S6 ]` `[ S7 ]`
+  - Clicking any button smoothly glides the camera directly to that section.
+  - The active button updates automatically as you scroll.
+- **Dynamic Camera Readout**:
+  - The HUD and bottom status bar dynamically display the current sector:
+    e.g. `💠 SEC 4 • Central Quantum Core • Camera: 4,800m / 9,600m`.
