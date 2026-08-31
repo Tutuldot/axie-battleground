@@ -2057,11 +2057,470 @@ class AxieBattleGroundApp {
     btnPanRight?.addEventListener('click', () => {
       viewport.scrollBy({ left: 650, behavior: 'smooth' });
     });
+
+    // Initialize Trajectory System and Shoot Buttons (Defence, Offence, Neutral)
+    this.setupArenaTrajectoryAndButtons();
+  }
+
+  /* ==========================================================================
+     ARENA TACTICAL ACTION DECK (DEFENCE, OFFENCE, NEUTRAL) & POWER METER
+     ========================================================================== */
+  private activeBattleRole: 'defense' | 'offense' | 'neutral' = 'defense';
+  private powerMeterState: 'idle' | 'oscillating' | 'locked' = 'idle';
+  private currentShootPower: number = 0; // 0 to 100%
+  private powerOscillateDirection: number = 1; // 1 = rising, -1 = falling
+  private lastOscillateTimestamp: number = 0;
+  private powerOscillateRafId: number | null = null;
+
+  private setupArenaTrajectoryAndButtons() {
+    this.updatePowerMeterUI(0, 'defense');
+
+    // Shoot Buttons Setup: Defence (Green), Offence (Red), Neutral (Blue)
+    const btnDefense = document.getElementById('btn-shoot-defense');
+    const btnOffense = document.getElementById('btn-shoot-offense');
+    const btnNeutral = document.getElementById('btn-shoot-neutral');
+
+    const handleRoleButtonClick = (role: 'defense' | 'offense' | 'neutral') => {
+      if (this.powerMeterState === 'oscillating') {
+        // 2nd Tap: Stop the bar and lock strength!
+        this.lockPowerStrength();
+      } else {
+        // 1st Tap: Start ping-pong oscillation loop!
+        this.startPowerOscillation(role);
+      }
+    };
+
+    btnDefense?.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleRoleButtonClick('defense');
+    });
+
+    btnOffense?.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleRoleButtonClick('offense');
+    });
+
+    btnNeutral?.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleRoleButtonClick('neutral');
+    });
+  }
+
+  private startPowerOscillation(role: 'defense' | 'offense' | 'neutral') {
+    this.activeBattleRole = role;
+    this.powerMeterState = 'oscillating';
+    this.powerOscillateDirection = 1;
+    this.currentShootPower = 0;
+    this.lastOscillateTimestamp = performance.now();
+
+    // Reset button states
+    ['btn-shoot-defense', 'btn-shoot-offense', 'btn-shoot-neutral'].forEach(id => {
+      const b = document.getElementById(id);
+      b?.classList.remove('is-oscillating');
+      b?.classList.remove('is-locked');
+    });
+
+    const activeBtn = document.getElementById(`btn-shoot-${role}`);
+    activeBtn?.classList.add('is-oscillating');
+
+    const hudCard = document.getElementById('arena-power-meter-hud');
+    if (hudCard) {
+      hudCard.className = `arena-power-meter-hud oscillating theme-${role}`;
+    }
+
+    if (this.powerOscillateRafId) {
+      cancelAnimationFrame(this.powerOscillateRafId);
+    }
+
+    // Power sweep speed: 100% per 1,100ms
+    const speedPctPerMs = 100 / 1100;
+
+    const oscillateLoop = (now: number) => {
+      if (this.powerMeterState !== 'oscillating') return;
+
+      const delta = Math.min(50, now - this.lastOscillateTimestamp);
+      this.lastOscillateTimestamp = now;
+
+      // Update power with ping-pong bounce: 0 -> 100 -> 0 -> 100...
+      this.currentShootPower += this.powerOscillateDirection * (delta * speedPctPerMs);
+
+      if (this.currentShootPower >= 100) {
+        this.currentShootPower = 100;
+        this.powerOscillateDirection = -1; // Bounce back down
+      } else if (this.currentShootPower <= 0) {
+        this.currentShootPower = 0;
+        this.powerOscillateDirection = 1; // Bounce back up
+      }
+
+      this.updatePowerMeterUI(this.currentShootPower, this.activeBattleRole);
+      this.powerOscillateRafId = requestAnimationFrame(oscillateLoop);
+    };
+
+    this.powerOscillateRafId = requestAnimationFrame(oscillateLoop);
+  }
+
+  private lockPowerStrength() {
+    this.powerMeterState = 'locked';
+
+    if (this.powerOscillateRafId) {
+      cancelAnimationFrame(this.powerOscillateRafId);
+      this.powerOscillateRafId = null;
+    }
+
+    // Remove oscillating class and add locked feedback
+    ['btn-shoot-defense', 'btn-shoot-offense', 'btn-shoot-neutral'].forEach(id => {
+      document.getElementById(id)?.classList.remove('is-oscillating');
+    });
+
+    const activeBtn = document.getElementById(`btn-shoot-${this.activeBattleRole}`);
+    activeBtn?.classList.add('is-locked');
+
+    const hudCard = document.getElementById('arena-power-meter-hud');
+    hudCard?.classList.remove('oscillating');
+
+    // Update status to locked feedback
+    const statusTitle = document.getElementById('power-hud-mode-title');
+    const roleEmoji = this.activeBattleRole === 'defense' ? '🛡️ DEFENCE' : this.activeBattleRole === 'offense' ? '⚔️ OFFENCE' : '⚡ NEUTRAL';
+    const finalPower = Math.round(this.currentShootPower);
+
+    // Middle of the battlefield is 4,800m
+    const baseTargetX = Math.round(240 + (4800 - 240) * (this.currentShootPower / 100));
+
+    if (statusTitle) {
+      statusTitle.textContent = `🎯 ${roleEmoji} LAUNCHED! ${finalPower}% POWER (${baseTargetX.toLocaleString()}m)`;
+    }
+
+    const subtext = document.getElementById('power-hud-subtext');
+    if (subtext) {
+      subtext.textContent = `🚀 Squad deployed to ${baseTargetX.toLocaleString()}m • Tap Defence, Offence, or Neutral for next wave`;
+    }
+
+    // Launch the Axies in this group
+    this.launchSquadAxies(this.activeBattleRole, finalPower, baseTargetX);
+  }
+
+  private arenaSpineEngines: Map<string, AxieMixerEngine> = new Map();
+
+  private readonly ARENA_GROUND_Y = 80;
+  private readonly ARENA_PLATFORMS: Array<{ x1: number; x2: number; y: number }> = [
+    // Layer 1: Mid Platforms
+    { x1: 550, x2: 970, y: 230 },
+    { x1: 1550, x2: 1990, y: 250 },
+    { x1: 2650, x2: 3070, y: 240 },
+    { x1: 3750, x2: 4210, y: 250 },
+    { x1: 4550, x2: 5050, y: 270 },
+    { x1: 5400, x2: 5860, y: 250 },
+    { x1: 6450, x2: 6870, y: 240 },
+    { x1: 7550, x2: 7990, y: 250 },
+    { x1: 8600, x2: 9020, y: 230 },
+    // Layer 2: High Platforms
+    { x1: 950, x2: 1390, y: 420 },
+    { x1: 2150, x2: 2610, y: 430 },
+    { x1: 3250, x2: 3710, y: 420 },
+    { x1: 4500, x2: 5100, y: 460 },
+    { x1: 5900, x2: 6360, y: 420 },
+    { x1: 7000, x2: 7460, y: 430 },
+    { x1: 8200, x2: 8640, y: 420 },
+  ];
+
+  private getSurfaceYUnder(x: number, currentY: number): number {
+    let highest = this.ARENA_GROUND_Y;
+    for (const p of this.ARENA_PLATFORMS) {
+      if (x >= p.x1 && x <= p.x2 && p.y <= currentY + 15) {
+        if (p.y > highest) {
+          highest = p.y;
+        }
+      }
+    }
+    return highest;
+  }
+
+  private getHighestSurfaceAt(x: number): number {
+    let highest = this.ARENA_GROUND_Y;
+    for (const p of this.ARENA_PLATFORMS) {
+      if (x >= p.x1 && x <= p.x2) {
+        if (p.y > highest) {
+          highest = p.y;
+        }
+      }
+    }
+    return highest;
+  }
+
+  private launchSquadAxies(role: 'defense' | 'offense' | 'neutral', _powerPct: number, baseTargetX: number) {
+    const container = document.getElementById('arena-stationed-axies-container');
+    if (!container) return;
+
+    const roleType: TeamRole = role === 'defense' ? 'Defense' : role === 'offense' ? 'Offense' : 'Neutral';
+    let axies = this.teamManager.getSquadByRole(roleType);
+
+    // Fallback if squad is empty
+    if (!axies || axies.length === 0) {
+      axies = this.teamManager.getPlayerAxies().slice(0, 5);
+    }
+
+    const roleClass = role;
+    const roleShort = role === 'defense' ? 'def' : role === 'offense' ? 'off' : 'neu';
+
+    // Camera follow: smoothly center viewport around the landing area
+    const viewport = document.getElementById('arena-world-viewport');
+    if (viewport) {
+      const cameraTarget = Math.max(0, baseTargetX - (viewport.clientWidth / 2));
+      viewport.scrollTo({ left: cameraTarget, behavior: 'smooth' });
+    }
+
+    // Launch each Axie with randomized trajectory so they don't fall in the same spot
+    axies.forEach((axie, index) => {
+      const xSpreadOffset = (index - (axies.length - 1) / 2) * 120 + (Math.random() - 0.5) * 140;
+      const targetX = Math.max(340, Math.min(4900, Math.round(baseTargetX + xSpreadOffset)));
+      
+      // Determine ground or platform landing surface
+      const targetY = this.getHighestSurfaceAt(targetX);
+
+      const startX = 240 + (Math.random() - 0.5) * 30;
+      const startY = this.ARENA_GROUND_Y;
+      const apexHeight = Math.max(targetY + 120, 240 + Math.random() * 100);
+      const jumpDuration = 1050 + Math.random() * 180;
+      const staggerDelay = index * 75;
+
+      setTimeout(() => {
+        this.animateAxieJump(axie, roleClass, roleShort, roleType, startX, startY, targetX, targetY, apexHeight, jumpDuration, container);
+      }, staggerDelay);
+    });
+  }
+
+  private animateAxieJump(
+    axie: any,
+    roleClass: string,
+    roleShort: string,
+    roleType: string,
+    startX: number,
+    startY: number,
+    targetX: number,
+    targetY: number,
+    apexHeight: number,
+    jumpDuration: number,
+    container: HTMLElement
+  ) {
+    const jumpEl = document.createElement('div');
+    jumpEl.className = `arena-jumping-spine-unit role-${roleClass}`;
+
+    jumpEl.innerHTML = `
+      <div class="unit-floating-hud">
+        <div class="unit-health-gauge">
+          <div class="unit-health-fill player" style="width: 100%;"></div>
+        </div>
+        <span class="unit-role-pill role-${roleShort}">${roleType.toUpperCase()}</span>
+        <span class="unit-name-label">${axie.name}</span>
+      </div>
+      <canvas class="unit-spine-canvas" width="78" height="62"></canvas>
+      <div class="unit-ground-shadow"></div>
+    `;
+
+    jumpEl.style.left = `${startX}px`;
+    jumpEl.style.bottom = `${startY}px`;
+    container.appendChild(jumpEl);
+
+    // Initialize smaller 2D Spine on jumping unit (transparent background, facing right, activity appear)
+    const canvas = jumpEl.querySelector('canvas') as HTMLCanvasElement;
+    let spineEngine: AxieMixerEngine | null = null;
+    if (canvas && axie.genes) {
+      spineEngine = new AxieMixerEngine(canvas, {
+        backgroundAlpha: 0,
+        zoomScale: 0.135,
+        isFlipped: true, // Facing right towards battlefield
+        defaultAnimation: 'activity/appear',
+        autoResize: false,
+      });
+      spineEngine.loadAxieFromGenes(axie.genes, axie.accessories || []).catch(() => {});
+    }
+
+    const startTime = performance.now();
+
+    const jumpStep = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / jumpDuration);
+
+      // Trajectory calculation
+      const curX = startX + (targetX - startX) * progress;
+      const arcY = 4 * apexHeight * progress * (1 - progress);
+      const curY = startY + (targetY - startY) * progress + arcY;
+      const rotDeg = Math.sin(progress * Math.PI) * 10; // Forward tilt facing right
+
+      jumpEl.style.left = `${curX.toFixed(1)}px`;
+      jumpEl.style.bottom = `${curY.toFixed(1)}px`;
+      jumpEl.style.transform = `rotate(${rotDeg.toFixed(1)}deg)`;
+
+      if (progress < 1) {
+        requestAnimationFrame(jumpStep);
+      } else {
+        // Landing impact on surface
+        jumpEl.remove();
+        if (spineEngine) {
+          spineEngine.destroy();
+        }
+        this.spawnStationedAxie(axie, roleClass, roleShort, roleType, targetX, targetY, container);
+      }
+    };
+
+    requestAnimationFrame(jumpStep);
+  }
+
+  private spawnStationedAxie(
+    axie: any,
+    roleClass: string,
+    roleShort: string,
+    roleType: string,
+    targetX: number,
+    targetY: number,
+    container: HTMLElement
+  ) {
+    // 1. Landing Shockwave ring on ground/platform surface
+    const shockwave = document.createElement('div');
+    shockwave.className = `landing-impact-shockwave role-${roleClass}`;
+    shockwave.style.left = `${targetX + 39}px`;
+    shockwave.style.bottom = `${targetY}px`;
+    container.appendChild(shockwave);
+    setTimeout(() => shockwave.remove(), 700);
+
+    // 2. Stationed Organic Spine Axie on surface with Activity Entrance state
+    const unit = document.createElement('div');
+    unit.className = `arena-spine-unit state-entrance role-${roleClass}`;
+    unit.style.left = `${targetX}px`;
+    unit.style.bottom = `${targetY}px`;
+
+    unit.innerHTML = `
+      <div class="unit-floating-hud">
+        <div class="unit-health-gauge">
+          <div class="unit-health-fill player" style="width: 100%;"></div>
+        </div>
+        <span class="unit-role-pill role-${roleShort}">${roleType.toUpperCase()}</span>
+        <span class="unit-name-label">${axie.name}</span>
+        <span class="unit-action-badge action-entrance">✨ ENTRANCE</span>
+      </div>
+      <canvas class="unit-spine-canvas" width="78" height="62"></canvas>
+      <div class="unit-ground-shadow"></div>
+    `;
+
+    container.appendChild(unit);
+
+    // 3. Live smaller 2D Spine instance (facing right)
+    const canvas = unit.querySelector('canvas') as HTMLCanvasElement;
+    let spineEngine: AxieMixerEngine | null = null;
+    const unitId = `spine-${axie.id}-${Date.now()}-${Math.random()}`;
+
+    if (canvas && axie.genes) {
+      spineEngine = new AxieMixerEngine(canvas, {
+        backgroundAlpha: 0,
+        zoomScale: 0.135,
+        isFlipped: true, // Facing right
+        defaultAnimation: 'activity/appear',
+        autoResize: false,
+      });
+
+      this.arenaSpineEngines.set(unitId, spineEngine);
+
+      spineEngine.loadAxieFromGenes(axie.genes, axie.accessories || []).catch(() => {});
+    }
+
+    // 4. Transition from Activity Entrance to Move-Forward with Platform/Edge Falling Physics
+    setTimeout(() => {
+      if (!unit.isConnected) return;
+
+      unit.classList.remove('state-entrance');
+      unit.classList.add('state-move-forward');
+
+      const actionBadge = unit.querySelector('.unit-action-badge');
+      if (actionBadge) {
+        actionBadge.className = 'unit-action-badge action-move-forward';
+        actionBadge.textContent = '🏃 MOVE-FORWARD';
+      }
+
+      // Switch 2D Spine Animation to move-forward / run facing right
+      if (spineEngine) {
+        spineEngine.setAnimation('action/move-forward', true);
+      }
+
+      // Continuous forward marching movement (+X) with Edge Falling Gravity Physics
+      let currentX = targetX;
+      let currentY = targetY;
+      let fallVy = 0;
+      const walkSpeed = 44 + Math.random() * 10; // px per second
+      let lastTime = performance.now();
+
+      const marchLoop = (time: number) => {
+        if (!unit.isConnected) {
+          if (spineEngine) {
+            spineEngine.destroy();
+            this.arenaSpineEngines.delete(unitId);
+          }
+          return;
+        }
+
+        const dt = Math.min(0.05, (time - lastTime) / 1000);
+        lastTime = time;
+
+        // Walk forward
+        currentX += walkSpeed * dt;
+
+        // Check if there is ground / platform beneath the current X position
+        const groundSurfaceY = this.getSurfaceYUnder(currentX, currentY);
+
+        if (currentY > groundSurfaceY) {
+          // Unit stepped off the edge of a platform: fall with gravity down to ground!
+          fallVy += 750 * dt;
+          currentY -= fallVy * dt;
+
+          if (currentY <= groundSurfaceY) {
+            currentY = groundSurfaceY;
+            fallVy = 0;
+          }
+        } else {
+          currentY = groundSurfaceY;
+          fallVy = 0;
+        }
+
+        unit.style.left = `${currentX.toFixed(1)}px`;
+        unit.style.bottom = `${currentY.toFixed(1)}px`;
+
+        // Keep marching across arena (up to right base at 9,150px)
+        if (currentX < 9150) {
+          requestAnimationFrame(marchLoop);
+        }
+      };
+
+      requestAnimationFrame(marchLoop);
+    }, 750);
+  }
+
+  private updatePowerMeterUI(powerPct: number, role: 'defense' | 'offense' | 'neutral') {
+    const fillBar = document.getElementById('arena-power-fill-bar');
+    const pctLabel = document.getElementById('power-hud-pct');
+    const modeTitle = document.getElementById('power-hud-mode-title');
+    const hudCard = document.getElementById('arena-power-meter-hud');
+
+    if (fillBar) {
+      fillBar.style.width = `${powerPct.toFixed(1)}%`;
+      fillBar.className = `power-fill-bar theme-${role}`;
+    }
+    if (pctLabel) {
+      pctLabel.textContent = `${Math.round(powerPct)}%`;
+    }
+
+    if (this.powerMeterState === 'oscillating' && modeTitle) {
+      const roleName = role === 'defense' ? 'DEFENCE (GREEN)' : role === 'offense' ? 'OFFENCE (RED)' : 'NEUTRAL (BLUE)';
+      modeTitle.textContent = `⚡ OSCILLATING ${roleName} • TAP AGAIN TO LOCK STRENGTH!`;
+    }
+
+    if (hudCard) {
+      hudCard.className = `arena-power-meter-hud ${this.powerMeterState === 'oscillating' ? 'oscillating' : ''} theme-${role}`;
+    }
   }
 
   public openTrainingGround() {
     this.showPageView('training-ground');
     this.renderStationedAxiesInArena();
+    this.updatePowerMeterUI(0, this.activeBattleRole);
 
     const viewport = document.getElementById('arena-world-viewport');
     if (viewport) {
@@ -2074,7 +2533,13 @@ class AxieBattleGroundApp {
   }
 
   private renderStationedAxiesInArena() {
-    // Axies removed from the map for now per user instruction
+    this.arenaSpineEngines.forEach((engine) => {
+      try {
+        engine.destroy();
+      } catch {}
+    });
+    this.arenaSpineEngines.clear();
+
     const container = document.getElementById('arena-stationed-axies-container');
     if (container) {
       container.innerHTML = '';

@@ -957,6 +957,12 @@
               <div id="arena-minimap-viewport" class="arena-minimap-viewport cyber-cam-box">
                 <span class="minimap-cam-label">CAM</span>
               </div>
+
+              <!-- Shot Trajectory Landing Radar Marker on Minimap -->
+              <div id="arena-minimap-target-blip" class="minimap-target-blip theme-defense" style="left: 26%;">
+                <span class="blip-pulse"></span>
+                <span class="blip-dot"></span>
+              </div>
             </div>
           </div>
         </div>
@@ -1090,22 +1096,10 @@
             <span class="sector-range-badge">[ 0m — 1,370m ]</span>
           </div>
 
-          <!-- Boundary 1 -> 2 (1,370m) -->
-          <div class="sector-boundary-laser" style="left: 1370px;">
-            <div class="boundary-beam"></div>
-            <span class="sector-boundary-label">BOUNDARY • SEC 1 ⇄ SEC 2 (1,370m)</span>
-          </div>
-
           <!-- Section 2: West Transit (1,370m - 2,740m) -->
           <div class="sector-territory-banner west-banner" style="left: 2055px;">
             <span class="sector-title-badge">SECTOR 02 • WEST MAG-LEV TRANSIT</span>
             <span class="sector-range-badge">[ 1,370m — 2,740m ]</span>
-          </div>
-
-          <!-- Boundary 2 -> 3 (2,740m) -->
-          <div class="sector-boundary-laser" style="left: 2740px;">
-            <div class="boundary-beam"></div>
-            <span class="sector-boundary-label">BOUNDARY • SEC 2 ⇄ SEC 3 (2,740m)</span>
           </div>
 
           <!-- Section 3: West Frontier (2,740m - 4,110m) -->
@@ -1114,22 +1108,10 @@
             <span class="sector-range-badge">[ 2,740m — 4,110m ]</span>
           </div>
 
-          <!-- Boundary 3 -> Core (4,110m) -->
-          <div class="sector-boundary-laser core-laser" style="left: 4110px;">
-            <div class="boundary-beam core-beam"></div>
-            <span class="sector-boundary-label core-label">⚡ WEST ⇄ CENTRAL QUANTUM CORE (4,110m)</span>
-          </div>
-
           <!-- Section 4: Central Quantum Core (4,110m - 5,490m) -->
           <div class="sector-territory-banner center-core-banner" style="left: 4800px;">
             <span class="sector-title-badge center-badge">💠 SECTOR 04 • CENTRAL QUANTUM CORE</span>
             <span class="sector-range-badge center-range">[ 4,110m — 5,490m • CONTESTED HUB ]</span>
-          </div>
-
-          <!-- Boundary Core -> 5 (5,490m) -->
-          <div class="sector-boundary-laser core-laser" style="left: 5490px;">
-            <div class="boundary-beam core-beam"></div>
-            <span class="sector-boundary-label core-label">⚡ CENTRAL QUANTUM CORE ⇄ EAST (5,490m)</span>
           </div>
 
           <!-- Section 5: East Foundry (5,490m - 6,860m) -->
@@ -1138,22 +1120,10 @@
             <span class="sector-range-badge east-range">[ 5,490m — 6,860m ]</span>
           </div>
 
-          <!-- Boundary 5 -> 6 (6,860m) -->
-          <div class="sector-boundary-laser" style="left: 6860px;">
-            <div class="boundary-beam east-beam"></div>
-            <span class="sector-boundary-label east-label">BOUNDARY • SEC 5 ⇄ SEC 6 (6,860m)</span>
-          </div>
-
           <!-- Section 6: East Wastes (6,860m - 8,230m) -->
           <div class="sector-territory-banner east-banner" style="left: 7545px;">
             <span class="sector-title-badge east-title">SECTOR 06 • EAST GLITCH WASTES</span>
             <span class="sector-range-badge east-range">[ 6,860m — 8,230m ]</span>
-          </div>
-
-          <!-- Boundary 6 -> 7 (8,230m) -->
-          <div class="sector-boundary-laser" style="left: 8230px;">
-            <div class="boundary-beam east-beam"></div>
-            <span class="sector-boundary-label east-label">BOUNDARY • SEC 6 ⇄ SEC 7 (8,230m)</span>
           </div>
 
           <!-- Section 7: East Megaplex (8,230m - 9,600m) -->
@@ -1174,106 +1144,88 @@
 
           <!-- ==========================================================
                LAYER 1: MAG-LEV RAILS & CYBER SKYWALKS (bottom: ~250px)
-               (All step text labels removed for clean battleground layout)
                ========================================================== -->
           <!-- 1A: West Mag-Lev Rail -->
           <div class="platform-surface mid-platform cyber-platform" style="left: 550px; width: 420px; bottom: 230px;">
             <div class="platform-plank-top cyber-maglev-cyan"></div>
-            <div class="platform-supports"><div class="support-leg left cyber-leg"></div><div class="support-leg right cyber-leg"></div></div>
           </div>
 
           <!-- 1B: Neon Skywalk Alpha -->
           <div class="platform-surface mid-platform cyber-platform" style="left: 1550px; width: 440px; bottom: 250px;">
             <div class="platform-plank-top cyber-holo-walkway"></div>
-            <div class="platform-supports"><div class="support-leg left cyber-leg"></div><div class="support-leg right cyber-leg"></div></div>
           </div>
 
           <!-- 1C: Holo-Bridge Junction -->
           <div class="platform-surface mid-platform cyber-platform" style="left: 2650px; width: 420px; bottom: 240px;">
             <div class="platform-plank-top cyber-maglev-cyan"></div>
-            <div class="platform-supports"><div class="support-leg left cyber-leg"></div><div class="support-leg right cyber-leg"></div></div>
           </div>
 
           <!-- 1D: Sub-City Industrial Deck -->
           <div class="platform-surface mid-platform cyber-platform" style="left: 3750px; width: 460px; bottom: 250px;">
             <div class="platform-plank-top cyber-industrial-steel"></div>
-            <div class="platform-supports"><div class="support-leg left cyber-leg"></div><div class="support-leg right cyber-leg"></div></div>
           </div>
 
           <!-- 1E: Great Central Quantum Core Terminal (4,800m) -->
           <div class="platform-surface mid-platform center-platform cyber-platform cyber-quantum-terminal" style="left: 4550px; width: 500px; bottom: 270px;">
             <div class="platform-plank-top cyber-core-platform"></div>
-            <div class="platform-supports"><div class="support-leg left cyber-leg-core"></div><div class="support-leg right cyber-leg-core"></div></div>
           </div>
 
           <!-- 1F: Corpo Skywalk East -->
           <div class="platform-surface mid-platform cyber-platform" style="left: 5400px; width: 460px; bottom: 250px;">
             <div class="platform-plank-top cyber-industrial-steel"></div>
-            <div class="platform-supports"><div class="support-leg left cyber-leg"></div><div class="support-leg right cyber-leg"></div></div>
           </div>
 
           <!-- 1G: Mech Foundry Conduit -->
           <div class="platform-surface mid-platform cyber-platform" style="left: 6450px; width: 420px; bottom: 240px;">
             <div class="platform-plank-top cyber-maglev-magenta"></div>
-            <div class="platform-supports"><div class="support-leg left cyber-leg"></div><div class="support-leg right cyber-leg"></div></div>
           </div>
 
           <!-- 1H: Glitch Circuit Ledge -->
           <div class="platform-surface mid-platform cyber-platform" style="left: 7550px; width: 440px; bottom: 250px;">
             <div class="platform-plank-top cyber-holo-walkway"></div>
-            <div class="platform-supports"><div class="support-leg left cyber-leg"></div><div class="support-leg right cyber-leg"></div></div>
           </div>
 
           <!-- 1I: Chimera Data Dock -->
           <div class="platform-surface mid-platform cyber-platform" style="left: 8600px; width: 420px; bottom: 230px;">
             <div class="platform-plank-top cyber-maglev-magenta"></div>
-            <div class="platform-supports"><div class="support-leg left cyber-leg"></div><div class="support-leg right cyber-leg"></div></div>
           </div>
 
           <!-- ==========================================================
                LAYER 2: HIGH SKYWAY BRIDGES & ROOFTOP GIRDERS (bottom: ~430px)
-               (All step text labels removed for clean battleground layout)
                ========================================================== -->
           <!-- 2A: High-Voltage Powerway -->
           <div class="platform-surface high-platform cyber-high-platform" style="left: 950px; width: 440px; bottom: 420px;">
             <div class="platform-plank-top cyber-high-beam-cyan"></div>
-            <div class="cyber-hanging-laser left"></div><div class="cyber-hanging-laser right"></div>
           </div>
 
           <!-- 2B: Neon Rooftop Catwalk -->
           <div class="platform-surface high-platform cyber-high-platform" style="left: 2150px; width: 460px; bottom: 430px;">
             <div class="platform-plank-top cyber-high-beam-pink"></div>
-            <div class="cyber-hanging-laser left"></div><div class="cyber-hanging-laser right"></div>
           </div>
 
           <!-- 2C: Apex Transmission Gauge -->
           <div class="platform-surface high-platform cyber-high-platform" style="left: 3250px; width: 460px; bottom: 420px;">
             <div class="platform-plank-top cyber-high-beam-cyan"></div>
-            <div class="cyber-hanging-laser left"></div><div class="cyber-hanging-laser right"></div>
           </div>
 
           <!-- 2D: Grand Celestial Quantum Apex Lookout (4,800m) -->
           <div class="platform-surface high-platform center-high cyber-high-platform" style="left: 4500px; width: 600px; bottom: 460px;">
             <div class="platform-plank-top cyber-high-beam-core"></div>
-            <div class="cyber-hanging-laser left laser-gold"></div><div class="cyber-hanging-laser right laser-gold"></div>
           </div>
 
           <!-- 2E: Orbital Relay Walkway -->
           <div class="platform-surface high-platform cyber-high-platform" style="left: 5900px; width: 460px; bottom: 420px;">
             <div class="platform-plank-top cyber-high-beam-cyan"></div>
-            <div class="cyber-hanging-laser left"></div><div class="cyber-hanging-laser right"></div>
           </div>
 
           <!-- 2F: Dark Web Antenna Array -->
           <div class="platform-surface high-platform cyber-high-platform" style="left: 7000px; width: 460px; bottom: 430px;">
             <div class="platform-plank-top cyber-high-beam-pink"></div>
-            <div class="cyber-hanging-laser left"></div><div class="cyber-hanging-laser right"></div>
           </div>
 
           <!-- 2G: Chimera Megaplex Sky-Roof -->
           <div class="platform-surface high-platform cyber-high-platform" style="left: 8200px; width: 440px; bottom: 420px;">
             <div class="platform-plank-top cyber-high-beam-magenta"></div>
-            <div class="cyber-hanging-laser left"></div><div class="cyber-hanging-laser right"></div>
           </div>
 
           <!-- ==========================================================
@@ -1283,6 +1235,74 @@
             <!-- Cleared per user instruction -->
           </div>
 
+        </div>
+      </div>
+
+      <!-- BATTLE ACTION DECK: 3 BUTTONS (DEFENCE, OFFENCE, NEUTRAL) & POWER PROGRESS BAR -->
+      <div class="arena-launch-deck-container">
+        
+        <!-- Lightweight Power Meter HUD -->
+        <div id="arena-power-meter-hud" class="arena-power-meter-hud">
+          <div class="power-hud-top">
+            <div class="power-status-tag" id="power-hud-status-tag">
+              <span class="power-dot"></span>
+              <span id="power-hud-mode-title">TAP BUTTON TO START POWER • TAP AGAIN TO LOCK</span>
+            </div>
+            <div class="power-readout-row">
+              <span class="power-metric" id="power-hud-pct">0%</span>
+            </div>
+          </div>
+
+          <!-- Progress Bar Track -->
+          <div class="power-progress-track">
+            <!-- Dynamic Fill Bar -->
+            <div id="arena-power-fill-bar" class="power-fill-bar theme-defense" style="width: 0%;">
+              <div class="power-fill-glow"></div>
+            </div>
+          </div>
+
+          <div class="power-hud-subtext" id="power-hud-subtext">
+            Tap Defence, Offence, or Neutral to oscillate power • Tap again to lock strength
+          </div>
+        </div>
+
+        <!-- 3 Tactical Combat Shoot Buttons -->
+        <div class="arena-action-buttons-deck">
+          <!-- 1. DEFENCE (GREEN) -->
+          <button id="btn-shoot-defense" class="btn-battle-shoot btn-shoot-defense" title="Defence Formation (Green)">
+            <div class="btn-shoot-content">
+              <span class="shoot-btn-icon">🛡️</span>
+              <div class="shoot-btn-meta">
+                <span class="shoot-btn-name">DEFENCE</span>
+                <span class="shoot-btn-role-tag">GREEN FORMATION</span>
+              </div>
+            </div>
+            <div class="shoot-btn-hold-hint">TAP TO CHARGE</div>
+          </button>
+
+          <!-- 2. OFFENCE (RED) -->
+          <button id="btn-shoot-offense" class="btn-battle-shoot btn-shoot-offense" title="Offence Formation (Red)">
+            <div class="btn-shoot-content">
+              <span class="shoot-btn-icon">⚔️</span>
+              <div class="shoot-btn-meta">
+                <span class="shoot-btn-name">OFFENCE</span>
+                <span class="shoot-btn-role-tag">RED FORMATION</span>
+              </div>
+            </div>
+            <div class="shoot-btn-hold-hint">TAP TO CHARGE</div>
+          </button>
+
+          <!-- 3. NEUTRAL (BLUE) -->
+          <button id="btn-shoot-neutral" class="btn-battle-shoot btn-shoot-neutral" title="Neutral Formation (Blue)">
+            <div class="btn-shoot-content">
+              <span class="shoot-btn-icon">⚡</span>
+              <div class="shoot-btn-meta">
+                <span class="shoot-btn-name">NEUTRAL</span>
+                <span class="shoot-btn-role-tag">BLUE FORMATION</span>
+              </div>
+            </div>
+            <div class="shoot-btn-hold-hint">TAP TO CHARGE</div>
+          </button>
         </div>
       </div>
 

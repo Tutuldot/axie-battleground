@@ -24,6 +24,15 @@ export interface AccessoryItem {
   placement: 'Air' | 'Cheek' | 'Ground' | 'Hip' | 'Neck';
 }
 
+export interface AxieMixerEngineOptions {
+  backgroundAlpha?: number;
+  backgroundColor?: number;
+  zoomScale?: number;
+  isFlipped?: boolean;
+  defaultAnimation?: string;
+  autoResize?: boolean;
+}
+
 export class AxieMixerEngine {
   private app: Application;
   private currentAxieSpine?: Spine;
@@ -38,11 +47,16 @@ export class AxieMixerEngine {
 
   private isInitialized: boolean = false;
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, options?: AxieMixerEngineOptions) {
+    if (options?.zoomScale !== undefined) this.zoomScale = options.zoomScale;
+    if (options?.isFlipped !== undefined) this.isFlipped = options.isFlipped;
+    if (options?.defaultAnimation) this.currentAnimation = options.defaultAnimation;
+
     this.app = new Application({
       view: canvas,
-      resizeTo: canvas.parentElement || undefined,
-      backgroundColor: 0x0f172a,
+      resizeTo: options?.autoResize !== false && canvas.parentElement ? canvas.parentElement : undefined,
+      backgroundColor: options?.backgroundColor ?? 0x0f172a,
+      backgroundAlpha: options?.backgroundAlpha !== undefined ? options.backgroundAlpha : 1,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
       preserveDrawingBuffer: true,
@@ -267,13 +281,19 @@ export class AxieMixerEngine {
     this.updateSpineTransform();
   }
 
+  public setFlipped(flipped: boolean): void {
+    this.isFlipped = flipped;
+    this.updateSpineTransform();
+  }
+
   private updateSpineTransform(): void {
     if (!this.currentAxieSpine) return;
 
     const width = this.app.screen.width;
     const height = this.app.screen.height;
 
-    this.currentAxieSpine.position.set(width / 2, height / 2 + 80);
+    const posY = height > 240 ? height / 2 + 80 : height * 0.82;
+    this.currentAxieSpine.position.set(width / 2, posY);
     const scaleX = (this.isFlipped ? -1 : 1) * this.zoomScale;
     this.currentAxieSpine.scale.set(scaleX, this.zoomScale);
   }
