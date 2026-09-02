@@ -31,6 +31,7 @@ export interface AxieMixerEngineOptions {
   isFlipped?: boolean;
   defaultAnimation?: string;
   autoResize?: boolean;
+  spineOriginY?: number;
 }
 
 export class AxieMixerEngine {
@@ -42,6 +43,7 @@ export class AxieMixerEngine {
   private isLooping: boolean = true;
   private playbackSpeed: number = 1.0;
   private zoomScale: number = 0.35;
+  private spineOriginY?: number;
   private isFlipped: boolean = false;
   private equippedAccessories: AccessoryItem[] = [];
 
@@ -51,9 +53,15 @@ export class AxieMixerEngine {
     if (options?.zoomScale !== undefined) this.zoomScale = options.zoomScale;
     if (options?.isFlipped !== undefined) this.isFlipped = options.isFlipped;
     if (options?.defaultAnimation) this.currentAnimation = options.defaultAnimation;
+    if (options?.spineOriginY !== undefined) this.spineOriginY = options.spineOriginY;
+
+    const appWidth = options?.autoResize === false ? (canvas.width || 180) : undefined;
+    const appHeight = options?.autoResize === false ? (canvas.height || 140) : undefined;
 
     this.app = new Application({
       view: canvas,
+      width: appWidth,
+      height: appHeight,
       resizeTo: options?.autoResize !== false && canvas.parentElement ? canvas.parentElement : undefined,
       backgroundColor: options?.backgroundColor ?? 0x0f172a,
       backgroundAlpha: options?.backgroundAlpha !== undefined ? options.backgroundAlpha : 1,
@@ -292,7 +300,7 @@ export class AxieMixerEngine {
     const width = this.app.screen.width;
     const height = this.app.screen.height;
 
-    const posY = height > 240 ? height / 2 + 80 : height * 0.82;
+    const posY = this.spineOriginY !== undefined ? this.spineOriginY : (height > 240 ? height / 2 + 80 : height * 0.82);
     this.currentAxieSpine.position.set(width / 2, posY);
     const scaleX = (this.isFlipped ? -1 : 1) * this.zoomScale;
     this.currentAxieSpine.scale.set(scaleX, this.zoomScale);

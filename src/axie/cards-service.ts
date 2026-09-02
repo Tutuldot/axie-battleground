@@ -24,12 +24,39 @@ let cardsCache: Record<string, any> | null = null;
 export async function loadCardAbilitiesDatabase(): Promise<Record<string, any>> {
   if (cardsCache) return cardsCache;
   try {
-    const res = await fetch(CARDS_JSON_URL);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    cardsCache = await res.json();
+    let rawData: any = null;
+    try {
+      const localRes = await fetch('/axie-classic-cards-and-triggers.json');
+      if (localRes.ok) {
+        const json = await localRes.json();
+        rawData = json.cards || json;
+      }
+    } catch {}
+
+    if (!rawData) {
+      const res = await fetch(CARDS_JSON_URL);
+      if (res.ok) {
+        rawData = await res.json();
+      }
+    }
+
+    if (Array.isArray(rawData)) {
+      cardsCache = {};
+      rawData.forEach((item: any) => {
+        if (item && item.id) {
+          cardsCache![item.id] = item;
+        }
+      });
+    } else if (rawData && typeof rawData === 'object') {
+      cardsCache = rawData;
+    } else {
+      cardsCache = {};
+    }
+
     return cardsCache || {};
   } catch (err) {
     console.warn('Failed to load card abilities database:', err);
+    cardsCache = {};
     return {};
   }
 }

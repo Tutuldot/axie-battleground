@@ -12,6 +12,27 @@ import { calculateAxieClassicStats } from './axie/stats-calculator';
 import { TeamManager, TeamRole, AxieTeam } from './game/team-manager';
 import { getAxieBodyStructure512 } from '@axieinfinity/mixer';
 
+export interface TacticalAxieUnit {
+  id: string;
+  name: string;
+  class: string;
+  team: 'red' | 'blue';
+  initialRow: number;
+  initialCol: number;
+  row: number;
+  col: number;
+  hpStat: number;
+  speed: number;
+  morale: number;
+  maxHp: number;
+  currentHp: number;
+  genes: string;
+  cards: AxieCardAbility[];
+  spineEngine?: AxieMixerEngine;
+  domElement?: HTMLElement;
+  isDefeated: boolean;
+}
+
 class AxieBattleGroundApp {
   private teamManager: TeamManager = new TeamManager();
   private inspectorEngine?: AxieMixerEngine;
@@ -1875,675 +1896,881 @@ class AxieBattleGroundApp {
   }
 
   /* ==========================================================================
-     PAGE 5: SIDE-SCROLLING FOREST TRAINING GROUND (3,200px ARENA)
+     PAGE 5: TACTICAL CELL-BASED BATTLE GROUND (4 ROWS X 8 COLS = 32 CELLS)
      ========================================================================== */
-  private isArenaPanning: boolean = false;
-  private arenaPanStartX: number = 0;
-  private arenaPanScrollLeft: number = 0;
+  private selectedCellId: string | null = null;
+  private boardSpineEngines: Map<string, AxieMixerEngine> = new Map();
+  private tacticalUnits: Array<{
+    id: string;
+    name: string;
+    class: string;
+    team: 'red' | 'blue';
+    initialRow: number;
+    initialCol: number;
+    row: number;
+    col: number;
+    hpStat: number;
+    speed: number;
+    morale: number;
+    maxHp: number;
+    currentHp: number;
+    genes: string;
+    cards: AxieCardAbility[];
+    spineEngine?: AxieMixerEngine;
+    domElement?: HTMLElement;
+    isDefeated: boolean;
+  }> = [];
+  private isTacticalBattleRunning: boolean = false;
+  private currentTacticalRound: number = 1;
+
+  // Calibrated Grid Perspective Geometry
+  private readonly ARENA_GRID_Y_LINES = [174, 220, 275, 335, 397]; // 5 horizontal lines -> 4 rows
+  private readonly ARENA_GRID_V_LINES = [
+    { top: 80.4, bottom: 18.4 },   // Col 0 left
+    { top: 181.6, bottom: 136.8 }, // Col 1 left / Col 0 right
+    { top: 289.3, bottom: 257.6 }, // Col 2 left / Col 1 right (End Red Zone)
+    { top: 398.8, bottom: 381.6 }, // Col 3 left / Col 2 right
+    { top: 513.5, bottom: 508.2 }, // Col 4 left / Col 3 right (Center line)
+    { top: 618.0, bottom: 627.2 }, // Col 5 left / Col 4 right
+    { top: 716.5, bottom: 740.3 }, // Col 6 left / Col 5 right (Start Blue Zone)
+    { top: 821.6, bottom: 863.8 }, // Col 7 left / Col 6 right
+    { top: 927.0, bottom: 985.0 }  // Col 7 right
+  ];
+
+  // 6 Tactical Demo Axies starting from ID 300
+  private readonly BOARD_AXIES_LINEUP = [
+    // --- RED TEAM (3 AXIES) ---
+    {
+      id: '300',
+      name: 'Axie #300',
+      class: 'Plant',
+      team: 'red' as const,
+      row: 1, // Row 2 (0-indexed 1)
+      col: 1, // Col 2 (0-indexed 1, Frontline Red)
+      genes: '0x180000000000030001c08050410800000003000c104081040001000008404402000200800800c0040001000810a08002000100041060c0060001000c18a0c206'
+    },
+    {
+      id: '301',
+      name: 'Axie #301',
+      class: 'Plant',
+      team: 'red' as const,
+      row: 0, // Row 1 (0-indexed 0, Top Backline Red)
+      col: 0, // Col 1 (0-indexed 0)
+      genes: '0x180000000000030003810020c400000000000084080045040001001410404502000100041840c5020001000c18a044040001000c0860c5040001000808a0c406'
+    },
+    {
+      id: '302',
+      name: 'Axie #302',
+      class: 'Bird',
+      team: 'red' as const,
+      row: 2, // Row 3 (0-indexed 2, Bottom Backline Red)
+      col: 0, // Col 1 (0-indexed 0)
+      genes: '0x100000000000030001014051020800000001000810204204000100001040840400010008108080040001000408604406000100041020c5060001000818604006'
+    },
+
+    // --- BLUE TEAM (3 AXIES) ---
+    {
+      id: '303',
+      name: 'Axie #303',
+      class: 'Aquatic',
+      team: 'blue' as const,
+      row: 1, // Row 2 (0-indexed 1, Frontline Blue)
+      col: 6, // Col 7 (0-indexed 6)
+      genes: '0x200000000000030001804050c210000000030010108045040001001410a080020003001008804204000300101880830200030004182045020003001018804506'
+    },
+    {
+      id: '304',
+      name: 'Axie #304',
+      class: 'Aquatic',
+      team: 'blue' as const,
+      row: 0, // Row 1 (0-indexed 0, Top Backline Blue)
+      col: 7, // Col 8 (0-indexed 7)
+      genes: '0x200000000000030001408080020c000000010014084040040001001008004202000100101020c302000000880860840600010010080083040001000010008302'
+    },
+    {
+      id: '305',
+      name: 'Axie #305',
+      class: 'Beast',
+      team: 'blue' as const,
+      row: 2, // Row 3 (0-indexed 2, Bottom Backline Blue)
+      col: 7, // Col 8 (0-indexed 7)
+      genes: '0x30000010001000c0000000100001000820400010004104080020001000008a0c302000100001020c2040001000c08a043060001000410208006'
+    }
+  ];
 
   private setupTrainingGround() {
     const btnExit = document.getElementById('btn-exit-training-ground');
     btnExit?.addEventListener('click', () => {
+      this.isTacticalBattleRunning = false;
       this.showPageView('dashboard');
-      // Set active tab to battle
       const tabBattle = document.getElementById('tab-btn-battle');
       tabBattle?.click();
     });
 
-    const viewport = document.getElementById('arena-world-viewport') as HTMLElement;
-    const minimap = document.getElementById('arena-minimap') as HTMLElement;
-    const minimapViewport = document.getElementById('arena-minimap-viewport') as HTMLElement;
-    const camMeterText = document.getElementById('arena-camera-meter-text');
-
-    if (!viewport) return;
-
-    // Helper: update minimap camera box & meter text
-    const updateMinimapAndMeter = () => {
-      const maxScroll = viewport.scrollWidth - viewport.clientWidth;
-      if (maxScroll <= 0) return;
-
-      const currentScroll = viewport.scrollLeft;
-      const scrollPct = currentScroll / maxScroll;
-      const camMeters = Math.round((currentScroll / maxScroll) * 9600);
-
-      // Determine active section (1 to 7)
-      let currentSectionName = 'SEC 1 • West Base';
-      let activeSecIdx = 0;
-      if (camMeters < 1370) {
-        currentSectionName = 'SEC 1 • West Base Command';
-        activeSecIdx = 0;
-      } else if (camMeters < 2740) {
-        currentSectionName = 'SEC 2 • West Mag-Lev Transit';
-        activeSecIdx = 1;
-      } else if (camMeters < 4110) {
-        currentSectionName = 'SEC 3 • West Forward Frontier';
-        activeSecIdx = 2;
-      } else if (camMeters <= 5490) {
-        currentSectionName = '💠 SEC 4 • Central Quantum Core';
-        activeSecIdx = 3;
-      } else if (camMeters < 6860) {
-        currentSectionName = 'SEC 5 • East Mech Foundry';
-        activeSecIdx = 4;
-      } else if (camMeters < 8230) {
-        currentSectionName = 'SEC 6 • East Glitch Wastes';
-        activeSecIdx = 5;
+    const btnStart = document.getElementById('btn-start-tactical-battle');
+    btnStart?.addEventListener('click', () => {
+      if (this.isTacticalBattleRunning) {
+        this.isTacticalBattleRunning = false;
+        if (btnStart) {
+          btnStart.textContent = '⚔️ RESUME';
+          btnStart.classList.remove('is-fighting');
+        }
       } else {
-        currentSectionName = 'SEC 7 • East Chimera Megaplex';
-        activeSecIdx = 6;
+        this.startTacticalBattle();
       }
-
-      // Update active state of 7 section buttons
-      const jumpButtons = document.querySelectorAll('.btn-sec-jump');
-      jumpButtons.forEach((btn, idx) => {
-        if (idx === activeSecIdx) btn.classList.add('active');
-        else btn.classList.remove('active');
-      });
-
-      // Width of camera box in percentage of minimap
-      const viewportWidthRatio = Math.min(1, viewport.clientWidth / viewport.scrollWidth);
-      const minimapBoxWidthPct = Math.max(5, viewportWidthRatio * 100);
-
-      // Left position in minimap
-      const maxMinimapLeft = 100 - minimapBoxWidthPct;
-      const minimapLeftPct = scrollPct * maxMinimapLeft;
-
-      if (minimapViewport) {
-        minimapViewport.style.width = `${minimapBoxWidthPct}%`;
-        minimapViewport.style.left = `${Math.max(0, Math.min(100 - minimapBoxWidthPct, minimapLeftPct))}%`;
-      }
-
-      if (camMeterText) {
-        camMeterText.textContent = `${currentSectionName} • Camera: ${camMeters.toLocaleString()}m / 9,600m`;
-      }
-    };
-
-    // Viewport scroll listener
-    viewport.addEventListener('scroll', () => {
-      updateMinimapAndMeter();
     });
 
-    // 1. Mouse Drag Panning
-    viewport.addEventListener('mousedown', (e) => {
-      // Don't pan if clicking an interactive button
-      if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.btn-sec-jump')) {
-        return;
-      }
-      this.isArenaPanning = true;
-      this.arenaPanStartX = e.pageX - viewport.offsetLeft;
-      this.arenaPanScrollLeft = viewport.scrollLeft;
+    const btnReset = document.getElementById('btn-reset-tactical-battle');
+    btnReset?.addEventListener('click', () => {
+      this.resetTacticalBattle();
     });
 
-    window.addEventListener('mouseup', () => {
-      this.isArenaPanning = false;
-    });
-
-    viewport.addEventListener('mousemove', (e) => {
-      if (!this.isArenaPanning) return;
-      e.preventDefault();
-      const x = e.pageX - viewport.offsetLeft;
-      const walk = (x - this.arenaPanStartX) * 1.5;
-      viewport.scrollLeft = this.arenaPanScrollLeft - walk;
-    });
-
-    // 2. Touch Panning for Mobile
-    let touchStartX = 0;
-    let touchScrollLeft = 0;
-
-    viewport.addEventListener('touchstart', (e) => {
-      touchStartX = e.touches[0].pageX - viewport.offsetLeft;
-      touchScrollLeft = viewport.scrollLeft;
-    }, { passive: true });
-
-    viewport.addEventListener('touchmove', (e) => {
-      const x = e.touches[0].pageX - viewport.offsetLeft;
-      const walk = (x - touchStartX) * 1.5;
-      viewport.scrollLeft = touchScrollLeft - walk;
-    }, { passive: true });
-
-    // 3. Minimap Click / Drag to Jump Camera
-    let isMinimapDragging = false;
-
-    const handleMinimapJump = (e: MouseEvent) => {
-      const rect = minimap.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const pct = Math.max(0, Math.min(1, clickX / rect.width));
-      const maxScroll = viewport.scrollWidth - viewport.clientWidth;
-      viewport.scrollTo({
-        left: pct * maxScroll,
-        behavior: 'smooth',
-      });
-    };
-
-    minimap?.addEventListener('click', (e) => {
-      handleMinimapJump(e);
-    });
-
-    minimapViewport?.addEventListener('mousedown', (e) => {
-      e.stopPropagation();
-      isMinimapDragging = true;
-    });
-
-    window.addEventListener('mouseup', () => {
-      isMinimapDragging = false;
-    });
-
-    window.addEventListener('mousemove', (e) => {
-      if (!isMinimapDragging || !minimap) return;
-      const rect = minimap.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const pct = Math.max(0, Math.min(1, clickX / rect.width));
-      const maxScroll = viewport.scrollWidth - viewport.clientWidth;
-      viewport.scrollLeft = pct * maxScroll;
-    });
-
-    // 4. Quick Jump Buttons (7 Sections: West 1-3, Central Core, East 5-7)
-    const secJumpBtns = document.querySelectorAll('.btn-sec-jump');
-    secJumpBtns.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const targetX = parseInt((btn as HTMLElement).dataset.pos || '0', 10);
-        const targetScroll = Math.max(0, Math.min(viewport.scrollWidth - viewport.clientWidth, targetX - (viewport.clientWidth / 2)));
-        viewport.scrollTo({ left: targetScroll, behavior: 'smooth' });
-      });
-    });
-
-    // 5. Bottom Pan Arrow Nav Buttons
-    const btnPanLeft = document.getElementById('btn-pan-left-arrow');
-    const btnPanRight = document.getElementById('btn-pan-right-arrow');
-
-    btnPanLeft?.addEventListener('click', () => {
-      viewport.scrollBy({ left: -650, behavior: 'smooth' });
-    });
-
-    btnPanRight?.addEventListener('click', () => {
-      viewport.scrollBy({ left: 650, behavior: 'smooth' });
-    });
-
-    // Initialize Trajectory System and Shoot Buttons (Defence, Offence, Neutral)
-    this.setupArenaTrajectoryAndButtons();
-  }
-
-  /* ==========================================================================
-     ARENA TACTICAL ACTION DECK (DEFENCE, OFFENCE, NEUTRAL) & POWER METER
-     ========================================================================== */
-  private activeBattleRole: 'defense' | 'offense' | 'neutral' = 'defense';
-  private powerMeterState: 'idle' | 'oscillating' | 'locked' = 'idle';
-  private currentShootPower: number = 0; // 0 to 100%
-  private powerOscillateDirection: number = 1; // 1 = rising, -1 = falling
-  private lastOscillateTimestamp: number = 0;
-  private powerOscillateRafId: number | null = null;
-
-  private setupArenaTrajectoryAndButtons() {
-    this.updatePowerMeterUI(0, 'defense');
-
-    // Shoot Buttons Setup: Defence (Green), Offence (Red), Neutral (Blue)
-    const btnDefense = document.getElementById('btn-shoot-defense');
-    const btnOffense = document.getElementById('btn-shoot-offense');
-    const btnNeutral = document.getElementById('btn-shoot-neutral');
-
-    const handleRoleButtonClick = (role: 'defense' | 'offense' | 'neutral') => {
-      if (this.powerMeterState === 'oscillating') {
-        // 2nd Tap: Stop the bar and lock strength!
-        this.lockPowerStrength();
-      } else {
-        // 1st Tap: Start ping-pong oscillation loop!
-        this.startPowerOscillation(role);
-      }
-    };
-
-    btnDefense?.addEventListener('click', (e) => {
-      e.preventDefault();
-      handleRoleButtonClick('defense');
-    });
-
-    btnOffense?.addEventListener('click', (e) => {
-      e.preventDefault();
-      handleRoleButtonClick('offense');
-    });
-
-    btnNeutral?.addEventListener('click', (e) => {
-      e.preventDefault();
-      handleRoleButtonClick('neutral');
-    });
-  }
-
-  private startPowerOscillation(role: 'defense' | 'offense' | 'neutral') {
-    this.activeBattleRole = role;
-    this.powerMeterState = 'oscillating';
-    this.powerOscillateDirection = 1;
-    this.currentShootPower = 0;
-    this.lastOscillateTimestamp = performance.now();
-
-    // Reset button states
-    ['btn-shoot-defense', 'btn-shoot-offense', 'btn-shoot-neutral'].forEach(id => {
-      const b = document.getElementById(id);
-      b?.classList.remove('is-oscillating');
-      b?.classList.remove('is-locked');
-    });
-
-    const activeBtn = document.getElementById(`btn-shoot-${role}`);
-    activeBtn?.classList.add('is-oscillating');
-
-    const hudCard = document.getElementById('arena-power-meter-hud');
-    if (hudCard) {
-      hudCard.className = `arena-power-meter-hud oscillating theme-${role}`;
-    }
-
-    if (this.powerOscillateRafId) {
-      cancelAnimationFrame(this.powerOscillateRafId);
-    }
-
-    // Power sweep speed: 100% per 1,100ms
-    const speedPctPerMs = 100 / 1100;
-
-    const oscillateLoop = (now: number) => {
-      if (this.powerMeterState !== 'oscillating') return;
-
-      const delta = Math.min(50, now - this.lastOscillateTimestamp);
-      this.lastOscillateTimestamp = now;
-
-      // Update power with ping-pong bounce: 0 -> 100 -> 0 -> 100...
-      this.currentShootPower += this.powerOscillateDirection * (delta * speedPctPerMs);
-
-      if (this.currentShootPower >= 100) {
-        this.currentShootPower = 100;
-        this.powerOscillateDirection = -1; // Bounce back down
-      } else if (this.currentShootPower <= 0) {
-        this.currentShootPower = 0;
-        this.powerOscillateDirection = 1; // Bounce back up
-      }
-
-      this.updatePowerMeterUI(this.currentShootPower, this.activeBattleRole);
-      this.powerOscillateRafId = requestAnimationFrame(oscillateLoop);
-    };
-
-    this.powerOscillateRafId = requestAnimationFrame(oscillateLoop);
-  }
-
-  private lockPowerStrength() {
-    this.powerMeterState = 'locked';
-
-    if (this.powerOscillateRafId) {
-      cancelAnimationFrame(this.powerOscillateRafId);
-      this.powerOscillateRafId = null;
-    }
-
-    // Remove oscillating class and add locked feedback
-    ['btn-shoot-defense', 'btn-shoot-offense', 'btn-shoot-neutral'].forEach(id => {
-      document.getElementById(id)?.classList.remove('is-oscillating');
-    });
-
-    const activeBtn = document.getElementById(`btn-shoot-${this.activeBattleRole}`);
-    activeBtn?.classList.add('is-locked');
-
-    const hudCard = document.getElementById('arena-power-meter-hud');
-    hudCard?.classList.remove('oscillating');
-
-    // Update status to locked feedback
-    const statusTitle = document.getElementById('power-hud-mode-title');
-    const roleEmoji = this.activeBattleRole === 'defense' ? '🛡️ DEFENCE' : this.activeBattleRole === 'offense' ? '⚔️ OFFENCE' : '⚡ NEUTRAL';
-    const finalPower = Math.round(this.currentShootPower);
-
-    // Middle of the battlefield is 4,800m
-    const baseTargetX = Math.round(240 + (4800 - 240) * (this.currentShootPower / 100));
-
-    if (statusTitle) {
-      statusTitle.textContent = `🎯 ${roleEmoji} LAUNCHED! ${finalPower}% POWER (${baseTargetX.toLocaleString()}m)`;
-    }
-
-    const subtext = document.getElementById('power-hud-subtext');
-    if (subtext) {
-      subtext.textContent = `🚀 Squad deployed to ${baseTargetX.toLocaleString()}m • Tap Defence, Offence, or Neutral for next wave`;
-    }
-
-    // Launch the Axies in this group
-    this.launchSquadAxies(this.activeBattleRole, finalPower, baseTargetX);
-  }
-
-  private arenaSpineEngines: Map<string, AxieMixerEngine> = new Map();
-
-  private readonly ARENA_GROUND_Y = 80;
-  private readonly ARENA_PLATFORMS: Array<{ x1: number; x2: number; y: number }> = [
-    // Layer 1: Mid Platforms
-    { x1: 550, x2: 970, y: 230 },
-    { x1: 1550, x2: 1990, y: 250 },
-    { x1: 2650, x2: 3070, y: 240 },
-    { x1: 3750, x2: 4210, y: 250 },
-    { x1: 4550, x2: 5050, y: 270 },
-    { x1: 5400, x2: 5860, y: 250 },
-    { x1: 6450, x2: 6870, y: 240 },
-    { x1: 7550, x2: 7990, y: 250 },
-    { x1: 8600, x2: 9020, y: 230 },
-    // Layer 2: High Platforms
-    { x1: 950, x2: 1390, y: 420 },
-    { x1: 2150, x2: 2610, y: 430 },
-    { x1: 3250, x2: 3710, y: 420 },
-    { x1: 4500, x2: 5100, y: 460 },
-    { x1: 5900, x2: 6360, y: 420 },
-    { x1: 7000, x2: 7460, y: 430 },
-    { x1: 8200, x2: 8640, y: 420 },
-  ];
-
-  private getSurfaceYUnder(x: number, currentY: number): number {
-    let highest = this.ARENA_GROUND_Y;
-    for (const p of this.ARENA_PLATFORMS) {
-      if (x >= p.x1 && x <= p.x2 && p.y <= currentY + 15) {
-        if (p.y > highest) {
-          highest = p.y;
-        }
-      }
-    }
-    return highest;
-  }
-
-  private getHighestSurfaceAt(x: number): number {
-    let highest = this.ARENA_GROUND_Y;
-    for (const p of this.ARENA_PLATFORMS) {
-      if (x >= p.x1 && x <= p.x2) {
-        if (p.y > highest) {
-          highest = p.y;
-        }
-      }
-    }
-    return highest;
-  }
-
-  private launchSquadAxies(role: 'defense' | 'offense' | 'neutral', _powerPct: number, baseTargetX: number) {
-    const container = document.getElementById('arena-stationed-axies-container');
-    if (!container) return;
-
-    const roleType: TeamRole = role === 'defense' ? 'Defense' : role === 'offense' ? 'Offense' : 'Neutral';
-    let axies = this.teamManager.getSquadByRole(roleType);
-
-    // Fallback if squad is empty
-    if (!axies || axies.length === 0) {
-      axies = this.teamManager.getPlayerAxies().slice(0, 5);
-    }
-
-    const roleClass = role;
-    const roleShort = role === 'defense' ? 'def' : role === 'offense' ? 'off' : 'neu';
-
-    // Camera follow: smoothly center viewport around the landing area
-    const viewport = document.getElementById('arena-world-viewport');
-    if (viewport) {
-      const cameraTarget = Math.max(0, baseTargetX - (viewport.clientWidth / 2));
-      viewport.scrollTo({ left: cameraTarget, behavior: 'smooth' });
-    }
-
-    // Launch each Axie with randomized trajectory so they don't fall in the same spot
-    axies.forEach((axie, index) => {
-      const xSpreadOffset = (index - (axies.length - 1) / 2) * 120 + (Math.random() - 0.5) * 140;
-      const targetX = Math.max(340, Math.min(4900, Math.round(baseTargetX + xSpreadOffset)));
-      
-      // Determine ground or platform landing surface
-      const targetY = this.getHighestSurfaceAt(targetX);
-
-      const startX = 240 + (Math.random() - 0.5) * 30;
-      const startY = this.ARENA_GROUND_Y;
-      const apexHeight = Math.max(targetY + 120, 240 + Math.random() * 100);
-      const jumpDuration = 1050 + Math.random() * 180;
-      const staggerDelay = index * 75;
-
-      setTimeout(() => {
-        this.animateAxieJump(axie, roleClass, roleShort, roleType, startX, startY, targetX, targetY, apexHeight, jumpDuration, container);
-      }, staggerDelay);
-    });
-  }
-
-  private animateAxieJump(
-    axie: any,
-    roleClass: string,
-    roleShort: string,
-    roleType: string,
-    startX: number,
-    startY: number,
-    targetX: number,
-    targetY: number,
-    apexHeight: number,
-    jumpDuration: number,
-    container: HTMLElement
-  ) {
-    const jumpEl = document.createElement('div');
-    jumpEl.className = `arena-jumping-spine-unit role-${roleClass}`;
-
-    jumpEl.innerHTML = `
-      <div class="unit-floating-hud">
-        <div class="unit-health-gauge">
-          <div class="unit-health-fill player" style="width: 100%;"></div>
-        </div>
-        <span class="unit-role-pill role-${roleShort}">${roleType.toUpperCase()}</span>
-        <span class="unit-name-label">${axie.name}</span>
-      </div>
-      <canvas class="unit-spine-canvas" width="78" height="62"></canvas>
-      <div class="unit-ground-shadow"></div>
-    `;
-
-    jumpEl.style.left = `${startX}px`;
-    jumpEl.style.bottom = `${startY}px`;
-    container.appendChild(jumpEl);
-
-    // Initialize smaller 2D Spine on jumping unit (transparent background, facing right, activity appear)
-    const canvas = jumpEl.querySelector('canvas') as HTMLCanvasElement;
-    let spineEngine: AxieMixerEngine | null = null;
-    if (canvas && axie.genes) {
-      spineEngine = new AxieMixerEngine(canvas, {
-        backgroundAlpha: 0,
-        zoomScale: 0.135,
-        isFlipped: true, // Facing right towards battlefield
-        defaultAnimation: 'activity/appear',
-        autoResize: false,
-      });
-      spineEngine.loadAxieFromGenes(axie.genes, axie.accessories || []).catch(() => {});
-    }
-
-    const startTime = performance.now();
-
-    const jumpStep = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(1, elapsed / jumpDuration);
-
-      // Trajectory calculation
-      const curX = startX + (targetX - startX) * progress;
-      const arcY = 4 * apexHeight * progress * (1 - progress);
-      const curY = startY + (targetY - startY) * progress + arcY;
-      const rotDeg = Math.sin(progress * Math.PI) * 10; // Forward tilt facing right
-
-      jumpEl.style.left = `${curX.toFixed(1)}px`;
-      jumpEl.style.bottom = `${curY.toFixed(1)}px`;
-      jumpEl.style.transform = `rotate(${rotDeg.toFixed(1)}deg)`;
-
-      if (progress < 1) {
-        requestAnimationFrame(jumpStep);
-      } else {
-        // Landing impact on surface
-        jumpEl.remove();
-        if (spineEngine) {
-          spineEngine.destroy();
-        }
-        this.spawnStationedAxie(axie, roleClass, roleShort, roleType, targetX, targetY, container);
-      }
-    };
-
-    requestAnimationFrame(jumpStep);
-  }
-
-  private spawnStationedAxie(
-    axie: any,
-    roleClass: string,
-    roleShort: string,
-    roleType: string,
-    targetX: number,
-    targetY: number,
-    container: HTMLElement
-  ) {
-    // 1. Landing Shockwave ring on ground/platform surface
-    const shockwave = document.createElement('div');
-    shockwave.className = `landing-impact-shockwave role-${roleClass}`;
-    shockwave.style.left = `${targetX + 39}px`;
-    shockwave.style.bottom = `${targetY}px`;
-    container.appendChild(shockwave);
-    setTimeout(() => shockwave.remove(), 700);
-
-    // 2. Stationed Organic Spine Axie on surface with Activity Entrance state
-    const unit = document.createElement('div');
-    unit.className = `arena-spine-unit state-entrance role-${roleClass}`;
-    unit.style.left = `${targetX}px`;
-    unit.style.bottom = `${targetY}px`;
-
-    unit.innerHTML = `
-      <div class="unit-floating-hud">
-        <div class="unit-health-gauge">
-          <div class="unit-health-fill player" style="width: 100%;"></div>
-        </div>
-        <span class="unit-role-pill role-${roleShort}">${roleType.toUpperCase()}</span>
-        <span class="unit-name-label">${axie.name}</span>
-        <span class="unit-action-badge action-entrance">✨ ENTRANCE</span>
-      </div>
-      <canvas class="unit-spine-canvas" width="78" height="62"></canvas>
-      <div class="unit-ground-shadow"></div>
-    `;
-
-    container.appendChild(unit);
-
-    // 3. Live smaller 2D Spine instance (facing right)
-    const canvas = unit.querySelector('canvas') as HTMLCanvasElement;
-    let spineEngine: AxieMixerEngine | null = null;
-    const unitId = `spine-${axie.id}-${Date.now()}-${Math.random()}`;
-
-    if (canvas && axie.genes) {
-      spineEngine = new AxieMixerEngine(canvas, {
-        backgroundAlpha: 0,
-        zoomScale: 0.135,
-        isFlipped: true, // Facing right
-        defaultAnimation: 'activity/appear',
-        autoResize: false,
-      });
-
-      this.arenaSpineEngines.set(unitId, spineEngine);
-
-      spineEngine.loadAxieFromGenes(axie.genes, axie.accessories || []).catch(() => {});
-    }
-
-    // 4. Transition from Activity Entrance to Move-Forward with Platform/Edge Falling Physics
-    setTimeout(() => {
-      if (!unit.isConnected) return;
-
-      unit.classList.remove('state-entrance');
-      unit.classList.add('state-move-forward');
-
-      const actionBadge = unit.querySelector('.unit-action-badge');
-      if (actionBadge) {
-        actionBadge.className = 'unit-action-badge action-move-forward';
-        actionBadge.textContent = '🏃 MOVE-FORWARD';
-      }
-
-      // Switch 2D Spine Animation to move-forward / run facing right
-      if (spineEngine) {
-        spineEngine.setAnimation('action/move-forward', true);
-      }
-
-      // Continuous forward marching movement (+X) with Edge Falling Gravity Physics
-      let currentX = targetX;
-      let currentY = targetY;
-      let fallVy = 0;
-      const walkSpeed = 44 + Math.random() * 10; // px per second
-      let lastTime = performance.now();
-
-      const marchLoop = (time: number) => {
-        if (!unit.isConnected) {
-          if (spineEngine) {
-            spineEngine.destroy();
-            this.arenaSpineEngines.delete(unitId);
-          }
-          return;
-        }
-
-        const dt = Math.min(0.05, (time - lastTime) / 1000);
-        lastTime = time;
-
-        // Walk forward
-        currentX += walkSpeed * dt;
-
-        // Check if there is ground / platform beneath the current X position
-        const groundSurfaceY = this.getSurfaceYUnder(currentX, currentY);
-
-        if (currentY > groundSurfaceY) {
-          // Unit stepped off the edge of a platform: fall with gravity down to ground!
-          fallVy += 750 * dt;
-          currentY -= fallVy * dt;
-
-          if (currentY <= groundSurfaceY) {
-            currentY = groundSurfaceY;
-            fallVy = 0;
-          }
-        } else {
-          currentY = groundSurfaceY;
-          fallVy = 0;
-        }
-
-        unit.style.left = `${currentX.toFixed(1)}px`;
-        unit.style.bottom = `${currentY.toFixed(1)}px`;
-
-        // Keep marching across arena (up to right base at 9,150px)
-        if (currentX < 9150) {
-          requestAnimationFrame(marchLoop);
-        }
-      };
-
-      requestAnimationFrame(marchLoop);
-    }, 750);
-  }
-
-  private updatePowerMeterUI(powerPct: number, role: 'defense' | 'offense' | 'neutral') {
-    const fillBar = document.getElementById('arena-power-fill-bar');
-    const pctLabel = document.getElementById('power-hud-pct');
-    const modeTitle = document.getElementById('power-hud-mode-title');
-    const hudCard = document.getElementById('arena-power-meter-hud');
-
-    if (fillBar) {
-      fillBar.style.width = `${powerPct.toFixed(1)}%`;
-      fillBar.className = `power-fill-bar theme-${role}`;
-    }
-    if (pctLabel) {
-      pctLabel.textContent = `${Math.round(powerPct)}%`;
-    }
-
-    if (this.powerMeterState === 'oscillating' && modeTitle) {
-      const roleName = role === 'defense' ? 'DEFENCE (GREEN)' : role === 'offense' ? 'OFFENCE (RED)' : 'NEUTRAL (BLUE)';
-      modeTitle.textContent = `⚡ OSCILLATING ${roleName} • TAP AGAIN TO LOCK STRENGTH!`;
-    }
-
-    if (hudCard) {
-      hudCard.className = `arena-power-meter-hud ${this.powerMeterState === 'oscillating' ? 'oscillating' : ''} theme-${role}`;
-    }
+    this.renderTacticalBattleGrid();
+    this.renderBoardSpineAxies();
   }
 
   public openTrainingGround() {
     this.showPageView('training-ground');
-    this.renderStationedAxiesInArena();
-    this.updatePowerMeterUI(0, this.activeBattleRole);
+    this.renderTacticalBattleGrid();
+    this.renderBoardSpineAxies();
+  }
 
-    const viewport = document.getElementById('arena-world-viewport');
-    if (viewport) {
-      // Start centered on the arena (4,800m Central Core)
-      setTimeout(() => {
-        const centerPos = (viewport.scrollWidth - viewport.clientWidth) / 2;
-        viewport.scrollTo({ left: centerPos, behavior: 'smooth' });
-      }, 60);
+  private getGridCellCenter(row: number, col: number): { cx: number; cy: number; leftPct: number; topPct: number } {
+    const yLines = this.ARENA_GRID_Y_LINES;
+    const vLines = this.ARENA_GRID_V_LINES;
+    const topY0 = yLines[0];
+    const botY4 = yLines[4];
+
+    const yTop = yLines[row];
+    const yBot = yLines[row + 1];
+
+    const tTop = (yTop - topY0) / (botY4 - topY0);
+    const tBot = (yBot - topY0) / (botY4 - topY0);
+
+    const xTopLeft = vLines[col].top + (vLines[col].bottom - vLines[col].top) * tTop;
+    const xTopRight = vLines[col + 1].top + (vLines[col + 1].bottom - vLines[col + 1].top) * tTop;
+    const xBotLeft = vLines[col].top + (vLines[col].bottom - vLines[col].top) * tBot;
+    const xBotRight = vLines[col + 1].top + (vLines[col + 1].bottom - vLines[col + 1].top) * tBot;
+
+    const cx = (xTopLeft + xTopRight + xBotLeft + xBotRight) / 4;
+    const cy = (yTop + yBot) / 2;
+
+    const leftPct = (cx / 1024) * 100;
+    const topPct = (cy / 409) * 100;
+
+    return { cx, cy, leftPct, topPct };
+  }
+
+  private renderTacticalBattleGrid() {
+    const cellsGroup = document.getElementById('arena-cells-group');
+    const readout = document.getElementById('arena-hover-cell-readout');
+
+    if (!cellsGroup) return;
+
+    cellsGroup.innerHTML = '';
+
+    const yLines = this.ARENA_GRID_Y_LINES;
+    const vLines = this.ARENA_GRID_V_LINES;
+    const topY0 = yLines[0];
+    const botY4 = yLines[4];
+
+    // Build 5x9 vertex matrix
+    const gridVertices: Array<Array<{ x: number; y: number }>> = [];
+
+    for (let r = 0; r < yLines.length; r++) {
+      const y = yLines[r];
+      const t = (y - topY0) / (botY4 - topY0);
+      const row: Array<{ x: number; y: number }> = [];
+
+      for (let c = 0; c < vLines.length; c++) {
+        const x = vLines[c].top + (vLines[c].bottom - vLines[c].top) * t;
+        row.push({ x, y });
+      }
+      gridVertices.push(row);
+    }
+
+    // Generate 32 Cells (4 Rows x 8 Columns) without text labels
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 8; c++) {
+        const cellId = `R${r + 1}-C${c + 1}`;
+        const p0 = gridVertices[r][c];
+        const p1 = gridVertices[r][c + 1];
+        const p2 = gridVertices[r + 1][c + 1];
+        const p3 = gridVertices[r + 1][c];
+
+        // Determine Zone:
+        // First 8 cells (Cols 0 & 1 -> c < 2): Red Zone
+        // Rightmost 8 cells (Cols 6 & 7 -> c >= 6): Blue Zone
+        // Middle 16 cells (Cols 2..5): Neutral Zone
+        const isRedZone = c < 2;
+        const isBlueZone = c >= 6;
+        const zoneClass = isRedZone ? 'cell-red' : isBlueZone ? 'cell-blue' : 'cell-neutral';
+        const zoneName = isRedZone ? 'Red Placement Zone' : isBlueZone ? 'Blue Placement Zone' : 'Combat Movement Arena';
+        const zoneEmoji = isRedZone ? '🔴' : isBlueZone ? '🔵' : '⚔️';
+
+        // Polygon element
+        const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        const pointsStr = `${p0.x.toFixed(1)},${p0.y.toFixed(1)} ${p1.x.toFixed(1)},${p1.y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)} ${p3.x.toFixed(1)},${p3.y.toFixed(1)}`;
+        polygon.setAttribute('points', pointsStr);
+        polygon.setAttribute('class', `arena-cell-polygon ${zoneClass}`);
+        polygon.setAttribute('data-cell-id', cellId);
+        polygon.setAttribute('data-zone', isRedZone ? 'red' : isBlueZone ? 'blue' : 'neutral');
+        polygon.setAttribute('data-row', String(r + 1));
+        polygon.setAttribute('data-col', String(c + 1));
+
+        // Hover events
+        polygon.addEventListener('mouseenter', () => {
+          if (readout && !this.isTacticalBattleRunning) {
+            readout.textContent = `${zoneEmoji} ${zoneName}: [${cellId}]`;
+          }
+        });
+
+        polygon.addEventListener('mouseleave', () => {
+          if (readout && !this.isTacticalBattleRunning) {
+            if (this.selectedCellId) {
+              const selectedEl = document.querySelector(`[data-cell-id="${this.selectedCellId}"]`);
+              const selZone = selectedEl?.getAttribute('data-zone');
+              const selEmoji = selZone === 'red' ? '🔴' : selZone === 'blue' ? '🔵' : '⚔️';
+              readout.textContent = `Selected: ${selEmoji} [${this.selectedCellId}]`;
+            } else {
+              readout.textContent = 'Click START BATTLE to begin!';
+            }
+          }
+        });
+
+        // Click selection
+        polygon.addEventListener('click', () => {
+          if (this.isTacticalBattleRunning) return;
+          document.querySelectorAll('.arena-cell-polygon').forEach((el) => el.classList.remove('is-selected'));
+          if (this.selectedCellId === cellId) {
+            this.selectedCellId = null;
+            if (readout) readout.textContent = 'Click START BATTLE to begin!';
+          } else {
+            this.selectedCellId = cellId;
+            polygon.classList.add('is-selected');
+            if (readout) {
+              readout.textContent = `Selected: ${zoneEmoji} [${cellId}] (${zoneName})`;
+            }
+          }
+        });
+
+        cellsGroup.appendChild(polygon);
+      }
     }
   }
 
-  private renderStationedAxiesInArena() {
-    this.arenaSpineEngines.forEach((engine) => {
+  private async renderBoardSpineAxies() {
+    // Clean up previous Spine engines
+    this.boardSpineEngines.forEach((engine) => {
       try {
         engine.destroy();
       } catch {}
     });
-    this.arenaSpineEngines.clear();
+    this.boardSpineEngines.clear();
+    this.tacticalUnits = [];
 
-    const container = document.getElementById('arena-stationed-axies-container');
-    if (container) {
-      container.innerHTML = '';
+    const unitsContainer = document.getElementById('arena-units-container');
+    const readout = document.getElementById('arena-hover-cell-readout');
+    if (!unitsContainer) return;
+
+    unitsContainer.innerHTML = '';
+
+    // Load Card Database if not loaded
+    await loadCardAbilitiesDatabase();
+
+    // Render 3 Red Axies and 3 Blue Axies
+    this.BOARD_AXIES_LINEUP.forEach((axie) => {
+      const { leftPct, topPct } = this.getGridCellCenter(axie.row, axie.col);
+      const isRed = axie.team === 'red';
+      const cellId = `R${axie.row + 1}-C${axie.col + 1}`;
+
+      // Calculate HP Stat: HP value = HP stat of axie * 300
+      const stats = calculateAxieClassicStats(axie.genes);
+      const maxHp = stats.hp * 300;
+      const currentHp = maxHp;
+
+      // Extract Cards from Body Structure
+      const bodyStructure = getAxieBodyStructure512(axie.genes);
+      let cards = getAxieCardsFromStructure(bodyStructure);
+
+      // Fallback cards if none decoded
+      if (!cards || cards.length === 0) {
+        cards = [
+          {
+            id: `${axie.class.toLowerCase()}-mouth-01`,
+            partName: 'Mouth',
+            skillName: `${axie.class} Strike`,
+            defaultAttack: 100,
+            defaultDefense: 40,
+            defaultEnergy: 1,
+            expectType: 'melee',
+            iconId: 'strike',
+            triggerColor: '#ff5252',
+            triggerText: 'Attack',
+            description: 'Deals melee damage',
+            imageUrl: '',
+            partType: 1 as any
+          },
+          {
+            id: `${axie.class.toLowerCase()}-horn-01`,
+            partName: 'Horn',
+            skillName: `${axie.class} Beam`,
+            defaultAttack: 110,
+            defaultDefense: 30,
+            defaultEnergy: 1,
+            expectType: 'ranged',
+            iconId: 'beam',
+            triggerColor: '#38bdf8',
+            triggerText: 'Ranged',
+            description: 'Deals ranged damage up to 3 cells',
+            imageUrl: '',
+            partType: 3 as any
+          }
+        ];
+      }
+
+      const unitEl = document.createElement('div');
+      unitEl.className = `arena-board-axie team-${axie.team}`;
+      unitEl.style.left = `${leftPct.toFixed(2)}%`;
+      unitEl.style.top = `${topPct.toFixed(2)}%`;
+      unitEl.style.zIndex = `${15 + axie.row * 10}`;
+
+      unitEl.innerHTML = `
+        <div class="board-axie-hud">
+          <div class="board-axie-hp-bar">
+            <div class="board-axie-hp-fill ${isRed ? 'red-hp' : 'blue-hp'}" style="width: 100%;"></div>
+          </div>
+          <span class="board-axie-tag ${isRed ? 'tag-red' : 'tag-blue'}">
+            ${isRed ? '🔴' : '🔵'} #${axie.id} ${axie.class.toUpperCase()}
+          </span>
+        </div>
+        <canvas class="board-axie-canvas" width="140" height="110"></canvas>
+        <div class="board-axie-shadow"></div>
+      `;
+
+      unitEl.addEventListener('mouseenter', () => {
+        if (readout && !this.isTacticalBattleRunning) {
+          readout.textContent = `${isRed ? '🔴 Red Team' : '🔵 Blue Team'} Unit #${axie.id} (${axie.class}) | HP: ${maxHp.toLocaleString()} | Spd: ${stats.speed} at [${cellId}]`;
+        }
+      });
+
+      unitEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.isTacticalBattleRunning) return;
+        document.querySelectorAll('.arena-board-axie').forEach((el) => el.classList.remove('is-selected'));
+        unitEl.classList.add('is-selected');
+        if (readout) {
+          const priority = this.getAggressionPriorityTargets(axie.class).join(', ');
+          readout.textContent = `🎯 Selected #${axie.id} (${axie.class}) | Target Priority: [${priority}] | Cards: ${cards.map(c => c.skillName).join(', ')}`;
+        }
+      });
+
+      unitsContainer.appendChild(unitEl);
+
+      // Initialize 2D Spine Engine
+      const canvas = unitEl.querySelector('canvas') as HTMLCanvasElement;
+      let spineEngine: AxieMixerEngine | undefined;
+      if (canvas && axie.genes) {
+        const zoomScale = 0.088 + axie.row * 0.004;
+
+        spineEngine = new AxieMixerEngine(canvas, {
+          backgroundAlpha: 0,
+          zoomScale: zoomScale,
+          spineOriginY: 92,
+          isFlipped: isRed, // Red faces right (flipped), Blue faces left
+          defaultAnimation: 'action/idle/normal',
+          autoResize: false,
+        });
+
+        this.boardSpineEngines.set(`axie-${axie.id}`, spineEngine);
+
+        spineEngine.loadAxieFromGenes(axie.genes).catch((err) => {
+          console.warn(`Failed to render Spine for Axie #${axie.id}:`, err);
+        });
+      }
+
+      // Add to tactical units list
+      this.tacticalUnits.push({
+        id: axie.id,
+        name: axie.name,
+        class: axie.class,
+        team: axie.team,
+        initialRow: axie.row,
+        initialCol: axie.col,
+        row: axie.row,
+        col: axie.col,
+        hpStat: stats.hp,
+        speed: stats.speed,
+        morale: stats.morale,
+        maxHp: maxHp,
+        currentHp: currentHp,
+        genes: axie.genes,
+        cards: cards,
+        spineEngine: spineEngine,
+        domElement: unitEl,
+        isDefeated: false,
+      });
+    });
+  }
+
+  /* ==========================================================================
+     TACTICAL AGGRESSION & COMBAT ENGINE
+     ========================================================================== */
+
+  /**
+   * Aggression Settings:
+   * 1. Bird, Aqua, Dawn prioritize Bug, Mech, and Beast as targets
+   * 2. Bug, Mech, and Beast prioritize Dusk, Plant, and Reptile as targets
+   * 3. Dusk, Plant, and Reptile prioritize Bird, Dawn, and Aqua as targets
+   */
+  private getAggressionPriorityTargets(attackerClass: string): string[] {
+    const c = attackerClass.toLowerCase();
+    if (c === 'bird' || c === 'aquatic' || c === 'aqua' || c === 'dawn') {
+      return ['Bug', 'Mech', 'Beast'];
     }
+    if (c === 'bug' || c === 'mech' || c === 'beast') {
+      return ['Dusk', 'Plant', 'Reptile'];
+    }
+    if (c === 'dusk' || c === 'plant' || c === 'reptile') {
+      return ['Bird', 'Dawn', 'Aquatic'];
+    }
+    return [];
+  }
+
+  /**
+   * Selects target based on Aggression Settings and grid proximity
+   */
+  private selectTacticalTarget(attacker: TacticalAxieUnit): TacticalAxieUnit | null {
+    const aliveEnemies = this.tacticalUnits.filter(
+      (u: TacticalAxieUnit) => u.team !== attacker.team && !u.isDefeated && u.currentHp > 0
+    );
+    if (aliveEnemies.length === 0) return null;
+
+    const priorityClasses = this.getAggressionPriorityTargets(attacker.class).map((s) => s.toLowerCase());
+    const priorityEnemies = aliveEnemies.filter((u: TacticalAxieUnit) => priorityClasses.includes(u.class.toLowerCase()));
+
+    const candidatePool = priorityEnemies.length > 0 ? priorityEnemies : aliveEnemies;
+
+    let bestTarget: TacticalAxieUnit | null = null;
+    let bestDist = Infinity;
+
+    for (const candidate of candidatePool) {
+      const dist = Math.abs(attacker.row - candidate.row) + Math.abs(attacker.col - candidate.col);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestTarget = candidate;
+      }
+    }
+
+    return bestTarget;
+  }
+
+  /**
+   * Checks if an attacker can attack a target with a given card
+   * - Melee attack: MUST be side-by-side on the SAME ROW (row == target.row and |col - target.col| == 1)
+   * - Ranged attack: can attack up to 3 cells away
+   */
+  private isCardInRange(
+    attacker: TacticalAxieUnit,
+    target: TacticalAxieUnit,
+    card: AxieCardAbility
+  ): boolean {
+    const isRanged = card.expectType === 'ranged';
+    if (isRanged) {
+      // Ranged can hit up to 3 cells away
+      const dRow = Math.abs(attacker.row - target.row);
+      const dCol = Math.abs(attacker.col - target.col);
+      return dRow <= 1 && dCol <= 3;
+    } else {
+      // Melee MUST be side-by-side on the same row!
+      return attacker.row === target.row && Math.abs(attacker.col - target.col) === 1;
+    }
+  }
+
+  /**
+   * Calculates the best next step cell towards target
+   * - Shifts row if necessary to align with target for melee
+   * - Then closes the column distance
+   */
+  private calculateNextStep(
+    unit: TacticalAxieUnit,
+    target: TacticalAxieUnit,
+    reservedCells: Set<string>
+  ): { r: number; c: number } | null {
+    const dRow = target.row - unit.row;
+    const dCol = target.col - unit.col;
+
+    const candidateSteps: Array<{ r: number; c: number }> = [];
+
+    // If on different rows, prioritize shifting row to align with target
+    if (dRow !== 0) {
+      candidateSteps.push({ r: unit.row + Math.sign(dRow), c: unit.col });
+    }
+
+    // Move horizontally towards target
+    if (dCol !== 0) {
+      // If moving horizontally, ensure not stepping onto target's cell
+      const nextCol = unit.col + Math.sign(dCol);
+      if (!(unit.row === target.row && nextCol === target.col)) {
+        candidateSteps.push({ r: unit.row, c: nextCol });
+      }
+    }
+
+    // Check occupied or reserved cells
+    for (const step of candidateSteps) {
+      if (
+        step.r >= 0 &&
+        step.r < 4 &&
+        step.c >= 0 &&
+        step.c < 8 &&
+        !reservedCells.has(`${step.r}-${step.c}`)
+      ) {
+        return step;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Executes continuous 3-step running animation across cell
+   */
+  private async executeSimultaneousRun(
+    unit: TacticalAxieUnit,
+    stepTarget: { r: number; c: number },
+    target: TacticalAxieUnit
+  ): Promise<void> {
+    const dCol = stepTarget.c - unit.col;
+
+    // Apply new coordinates
+    unit.row = stepTarget.r;
+    unit.col = stepTarget.c;
+
+    // Face movement direction if moving horizontally
+    if (dCol > 0) {
+      unit.spineEngine?.setFlipped(true); // Moving right -> face right
+    } else if (dCol < 0) {
+      unit.spineEngine?.setFlipped(false); // Moving left -> face left
+    }
+
+    // Start 2D Spine running animation (3-4 continuous running footstep strides)
+    unit.spineEngine?.setAnimation('action/run', true);
+    unit.domElement?.classList.add('is-running');
+
+    // Smooth linear DOM translation
+    if (unit.domElement) {
+      const { leftPct, topPct } = this.getGridCellCenter(unit.row, unit.col);
+      unit.domElement.style.left = `${leftPct.toFixed(2)}%`;
+      unit.domElement.style.top = `${topPct.toFixed(2)}%`;
+      unit.domElement.style.zIndex = `${15 + unit.row * 10}`;
+    }
+
+    // Running stride duration (850ms)
+    await this.sleep(850);
+
+    unit.domElement?.classList.remove('is-running');
+
+    // Re-face enemy side
+    const isRed = unit.team === 'red';
+    unit.spineEngine?.setFlipped(isRed);
+    unit.spineEngine?.setAnimation('action/idle/normal', true);
+  }
+
+  /**
+   * Executes simultaneous card attack (Melee lunge into adjacent cell or Ranged projectile)
+   */
+  private async executeSimultaneousAttack(
+    attacker: TacticalAxieUnit,
+    target: TacticalAxieUnit,
+    card: AxieCardAbility
+  ): Promise<void> {
+    attacker.domElement?.classList.add('is-attacking');
+
+    // Show floating card badge
+    this.showFloatingCardBadge(attacker, card);
+
+    const isRanged = card.expectType === 'ranged';
+    const isRed = attacker.team === 'red';
+
+    if (isRanged) {
+      attacker.spineEngine?.setAnimation('attack/ranged/cast-fly', false);
+      this.spawnRangedProjectile(attacker, target);
+    } else {
+      // Melee: Lunge into target cell's side
+      attacker.domElement?.classList.add(isRed ? 'is-lunge-right' : 'is-lunge-left');
+      attacker.spineEngine?.setAnimation('attack/melee/mouth-bite', false);
+      setTimeout(() => {
+        attacker.domElement?.classList.remove('is-lunge-right', 'is-lunge-left');
+      }, 320);
+    }
+
+    await this.sleep(380);
+
+    // Calculate Damage
+    const priorityClasses = this.getAggressionPriorityTargets(attacker.class).map((s) => s.toLowerCase());
+    const hasClassAdvantage = priorityClasses.includes(target.class.toLowerCase());
+    const advantageMultiplier = hasClassAdvantage ? 1.15 : 1.0;
+
+    const baseDmg = Math.round((card.defaultAttack || 100) * 18 * advantageMultiplier);
+    const isCrit = Math.random() < attacker.morale / 180;
+    const finalDmg = Math.round(isCrit ? baseDmg * 1.5 : baseDmg);
+
+    // Target damage & hit reaction
+    target.currentHp = Math.max(0, target.currentHp - finalDmg);
+    target.spineEngine?.setAnimation('defense/hit-by-normal', false);
+    target.domElement?.classList.add('is-hit');
+    setTimeout(() => target.domElement?.classList.remove('is-hit'), 350);
+
+    // Floating damage numbers
+    this.showFloatingDamage(target, finalDmg, isCrit, hasClassAdvantage);
+
+    // Update Target HP bar
+    this.updateUnitHud(target);
+
+    // Update Readout Ticker
+    const readout = document.getElementById('arena-hover-cell-readout');
+    if (readout) {
+      const advText = hasClassAdvantage ? ' 🔥 +15% CLASS ADVANTAGE!' : '';
+      readout.textContent = `${attacker.team === 'red' ? '🔴' : '🔵'} #${attacker.id} (${attacker.class}) used [${card.skillName}] on ${target.team === 'red' ? '🔴' : '🔵'} #${target.id} (${target.class}) for ${finalDmg.toLocaleString()} DMG!${advText}`;
+    }
+
+    await this.sleep(450);
+    attacker.domElement?.classList.remove('is-attacking');
+
+    if (!attacker.isDefeated) {
+      attacker.spineEngine?.setAnimation('action/idle/normal', true);
+    }
+
+    if (target.currentHp <= 0) {
+      target.isDefeated = true;
+      target.domElement?.classList.add('is-defeated');
+      const tag = target.domElement?.querySelector('.board-axie-tag');
+      if (tag) tag.textContent = `💀 #${target.id} DEFEATED`;
+    } else {
+      target.spineEngine?.setAnimation('action/idle/normal', true);
+    }
+  }
+
+  private updateUnitHud(unit: TacticalAxieUnit) {
+    if (!unit.domElement) return;
+    const hpFill = unit.domElement.querySelector('.board-axie-hp-fill') as HTMLElement;
+    if (hpFill) {
+      const pct = Math.max(0, Math.min(100, (unit.currentHp / unit.maxHp) * 100));
+      hpFill.style.width = `${pct.toFixed(1)}%`;
+    }
+  }
+
+  private showFloatingDamage(unit: TacticalAxieUnit, dmg: number, isCrit: boolean, hasAdvantage: boolean) {
+    if (!unit.domElement) return;
+    const el = document.createElement('div');
+    el.className = `floating-dmg-text ${isCrit ? 'crit' : ''}`;
+    el.textContent = `${isCrit ? '💥 ' : ''}-${dmg.toLocaleString()}${hasAdvantage ? ' (+15%)' : ''}`;
+    unit.domElement.appendChild(el);
+    setTimeout(() => el.remove(), 1100);
+  }
+
+  private showFloatingCardBadge(unit: TacticalAxieUnit, card: AxieCardAbility) {
+    if (!unit.domElement) return;
+    const el = document.createElement('div');
+    el.className = 'floating-card-action';
+    el.textContent = `🃏 ${card.skillName} (${card.expectType === 'ranged' ? '🏹 3-Cell' : '⚔️ 1-Cell Melee'})`;
+    unit.domElement.appendChild(el);
+    setTimeout(() => el.remove(), 1200);
+  }
+
+  private spawnRangedProjectile(attacker: TacticalAxieUnit, target: TacticalAxieUnit) {
+    const aspectBox = document.querySelector('.arena-board-aspect-box');
+    if (!aspectBox) return;
+
+    const start = this.getGridCellCenter(attacker.row, attacker.col);
+    const end = this.getGridCellCenter(target.row, target.col);
+
+    const proj = document.createElement('div');
+    proj.className = `ranged-projectile ${attacker.team === 'red' ? 'red-proj' : 'blue-proj'}`;
+    proj.style.left = `${start.leftPct}%`;
+    proj.style.top = `${start.topPct - 4}%`;
+
+    aspectBox.appendChild(proj);
+
+    requestAnimationFrame(() => {
+      proj.style.left = `${end.leftPct}%`;
+      proj.style.top = `${end.topPct - 4}%`;
+    });
+
+    setTimeout(() => {
+      proj.remove();
+    }, 380);
+  }
+
+  /**
+   * Simultaneous Tactical Battle Loop
+   * All alive units plan and act at the exact same time every round
+   */
+  private async startTacticalBattle() {
+    if (this.isTacticalBattleRunning) return;
+    this.isTacticalBattleRunning = true;
+
+    const startBtn = document.getElementById('btn-start-tactical-battle');
+    if (startBtn) {
+      startBtn.textContent = '⚔️ FIGHTING (SIMULTANEOUS)...';
+      startBtn.classList.add('is-fighting');
+    }
+
+    const readout = document.getElementById('arena-hover-cell-readout');
+    const roundBadge = document.getElementById('battle-round-badge');
+
+    while (this.isTacticalBattleRunning) {
+      if (roundBadge) roundBadge.textContent = `ROUND ${this.currentTacticalRound}`;
+
+      // Check win condition
+      const aliveRed = this.tacticalUnits.filter((u: TacticalAxieUnit) => u.team === 'red' && !u.isDefeated && u.currentHp > 0);
+      const aliveBlue = this.tacticalUnits.filter((u: TacticalAxieUnit) => u.team === 'blue' && !u.isDefeated && u.currentHp > 0);
+
+      if (aliveRed.length === 0 || aliveBlue.length === 0) {
+        const winner = aliveRed.length > 0 ? '🔴 RED TEAM WINS!' : aliveBlue.length > 0 ? '🔵 BLUE TEAM WINS!' : 'DRAW!';
+        if (readout) readout.textContent = `🏆 BATTLE ENDED: ${winner}`;
+        if (startBtn) {
+          startBtn.textContent = '⚔️ START BATTLE';
+          startBtn.classList.remove('is-fighting');
+        }
+        this.isTacticalBattleRunning = false;
+        break;
+      }
+
+      // Collect all alive units for simultaneous action planning
+      const allAliveUnits = [...aliveRed, ...aliveBlue];
+
+      // 1. PLAN PHASE: All units simultaneously decide to Attack or Move
+      const movingUnits: Array<{
+        unit: TacticalAxieUnit;
+        target: TacticalAxieUnit;
+        stepTarget: { r: number; c: number };
+      }> = [];
+
+      const attackingUnits: Array<{
+        unit: TacticalAxieUnit;
+        target: TacticalAxieUnit;
+        card: AxieCardAbility;
+      }> = [];
+
+      const reservedCells = new Set<string>(
+        allAliveUnits.map((u: TacticalAxieUnit) => `${u.row}-${u.col}`)
+      );
+
+      for (const unit of allAliveUnits) {
+        const target = this.selectTacticalTarget(unit);
+        if (!target) continue;
+
+        // Check if any card is in range
+        const attackCards = unit.cards.filter((c: AxieCardAbility) => (c.defaultAttack || 0) > 0);
+        const validCards = attackCards.filter((c: AxieCardAbility) => this.isCardInRange(unit, target, c));
+
+        if (validCards.length > 0) {
+          // Unit can attack this round
+          const chosenCard = validCards[Math.floor(Math.random() * validCards.length)];
+          attackingUnits.push({ unit, target, card: chosenCard });
+        } else {
+          // Unit needs to move closer / shift row for melee
+          const stepTarget = this.calculateNextStep(unit, target, reservedCells);
+          if (stepTarget) {
+            reservedCells.add(`${stepTarget.r}-${stepTarget.c}`);
+            movingUnits.push({ unit, target, stepTarget });
+          }
+        }
+      }
+
+      // 2. SIMULTANEOUS MOVEMENT EXECUTION
+      if (movingUnits.length > 0) {
+        await Promise.all(
+          movingUnits.map((item) => this.executeSimultaneousRun(item.unit, item.stepTarget, item.target))
+        );
+      }
+
+      // Check if moving units are now in range to perform a follow-up attack this round
+      for (const item of movingUnits) {
+        if (item.unit.currentHp > 0 && !item.unit.isDefeated && item.target.currentHp > 0 && !item.target.isDefeated) {
+          const attackCards = item.unit.cards.filter((c: AxieCardAbility) => (c.defaultAttack || 0) > 0);
+          const validCards = attackCards.filter((c: AxieCardAbility) => this.isCardInRange(item.unit, item.target, c));
+          if (validCards.length > 0 && !attackingUnits.some((a) => a.unit.id === item.unit.id)) {
+            const chosenCard = validCards[Math.floor(Math.random() * validCards.length)];
+            attackingUnits.push({ unit: item.unit, target: item.target, card: chosenCard });
+          }
+        }
+      }
+
+      // 3. SIMULTANEOUS ATTACK EXECUTION
+      if (attackingUnits.length > 0) {
+        await Promise.all(
+          attackingUnits
+            .filter((item) => item.unit.currentHp > 0 && !item.unit.isDefeated && item.target.currentHp > 0 && !item.target.isDefeated)
+            .map((item) => this.executeSimultaneousAttack(item.unit, item.target, item.card))
+        );
+      }
+
+      // 4. Check if battle concluded
+      const checkRed = this.tacticalUnits.filter((u: TacticalAxieUnit) => u.team === 'red' && !u.isDefeated && u.currentHp > 0);
+      const checkBlue = this.tacticalUnits.filter((u: TacticalAxieUnit) => u.team === 'blue' && !u.isDefeated && u.currentHp > 0);
+      if (checkRed.length === 0 || checkBlue.length === 0) {
+        const winner = checkRed.length > 0 ? '🔴 RED TEAM WINS!' : checkBlue.length > 0 ? '🔵 BLUE TEAM WINS!' : 'DRAW!';
+        if (readout) readout.textContent = `🏆 BATTLE ENDED: ${winner}`;
+        if (startBtn) {
+          startBtn.textContent = '⚔️ START BATTLE';
+          startBtn.classList.remove('is-fighting');
+        }
+        this.isTacticalBattleRunning = false;
+        break;
+      }
+
+      this.currentTacticalRound++;
+      await this.sleep(650);
+    }
+  }
+
+  private resetTacticalBattle() {
+    this.isTacticalBattleRunning = false;
+    this.currentTacticalRound = 1;
+
+    const startBtn = document.getElementById('btn-start-tactical-battle');
+    if (startBtn) {
+      startBtn.textContent = '⚔️ START BATTLE';
+      startBtn.classList.remove('is-fighting');
+    }
+
+    const roundBadge = document.getElementById('battle-round-badge');
+    if (roundBadge) roundBadge.textContent = 'ROUND 1';
+
+    const readout = document.getElementById('arena-hover-cell-readout');
+    if (readout) readout.textContent = 'Click START BATTLE to begin!';
+
+    // Reset units to initial position and full HP
+    this.tacticalUnits.forEach((unit) => {
+      unit.row = unit.initialRow;
+      unit.col = unit.initialCol;
+      unit.currentHp = unit.maxHp;
+      unit.isDefeated = false;
+
+      if (unit.domElement) {
+        unit.domElement.classList.remove('is-defeated', 'is-attacking', 'is-hit');
+        const { leftPct, topPct } = this.getGridCellCenter(unit.row, unit.col);
+        unit.domElement.style.left = `${leftPct.toFixed(2)}%`;
+        unit.domElement.style.top = `${topPct.toFixed(2)}%`;
+        unit.domElement.style.zIndex = `${15 + unit.row * 10}`;
+
+        const isRed = unit.team === 'red';
+        const tag = unit.domElement.querySelector('.board-axie-tag');
+        if (tag) {
+          tag.textContent = `${isRed ? '🔴' : '🔵'} #${unit.id} ${unit.class.toUpperCase()}`;
+        }
+
+        this.updateUnitHud(unit);
+      }
+
+      unit.spineEngine?.setAnimation('action/idle/normal', true);
+    });
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /* ==========================================================================
