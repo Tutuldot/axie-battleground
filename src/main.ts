@@ -26,8 +26,13 @@ export interface TacticalAxieUnit {
   morale: number;
   maxHp: number;
   currentHp: number;
+  currentShield: number;
   genes: string;
   cards: AxieCardAbility[];
+  cardIndex: number;
+  lockedTargetId: string | null;
+  isActing: boolean;
+  nextActionTime: number;
   spineEngine?: AxieMixerEngine;
   domElement?: HTMLElement;
   isDefeated: boolean;
@@ -1900,26 +1905,7 @@ class AxieBattleGroundApp {
      ========================================================================== */
   private selectedCellId: string | null = null;
   private boardSpineEngines: Map<string, AxieMixerEngine> = new Map();
-  private tacticalUnits: Array<{
-    id: string;
-    name: string;
-    class: string;
-    team: 'red' | 'blue';
-    initialRow: number;
-    initialCol: number;
-    row: number;
-    col: number;
-    hpStat: number;
-    speed: number;
-    morale: number;
-    maxHp: number;
-    currentHp: number;
-    genes: string;
-    cards: AxieCardAbility[];
-    spineEngine?: AxieMixerEngine;
-    domElement?: HTMLElement;
-    isDefeated: boolean;
-  }> = [];
+  private tacticalUnits: TacticalAxieUnit[] = [];
   private isTacticalBattleRunning: boolean = false;
   private currentTacticalRound: number = 1;
 
@@ -2207,7 +2193,7 @@ class AxieBattleGroundApp {
     // Load Card Database if not loaded
     await loadCardAbilitiesDatabase();
 
-    // Render 3 Red Axies and 3 Blue Axies
+    // Render 8 Demo Axies
     this.BOARD_AXIES_LINEUP.forEach((axie) => {
       const { leftPct, topPct } = this.getGridCellCenter(axie.row, axie.col);
       const isRed = axie.team === 'red';
@@ -2217,6 +2203,7 @@ class AxieBattleGroundApp {
       const stats = calculateAxieClassicStats(axie.genes);
       const maxHp = stats.hp * 300;
       const currentHp = maxHp;
+      const currentShield = 0;
 
       // Extract Cards from Body Structure
       const bodyStructure = getAxieBodyStructure512(axie.genes);
@@ -2254,6 +2241,21 @@ class AxieBattleGroundApp {
             description: 'Deals ranged damage up to 3 cells',
             imageUrl: '',
             partType: 3 as any
+          },
+          {
+            id: `${axie.class.toLowerCase()}-back-01`,
+            partName: 'Back',
+            skillName: `${axie.class} Shield Guard`,
+            defaultAttack: 0,
+            defaultDefense: 110,
+            defaultEnergy: 1,
+            expectType: 'melee',
+            iconId: 'shield',
+            triggerColor: '#00e5ff',
+            triggerText: 'Defense',
+            description: 'Grants high armor shield',
+            imageUrl: '',
+            partType: 4 as any
           }
         ];
       }
@@ -2266,14 +2268,19 @@ class AxieBattleGroundApp {
 
       unitEl.innerHTML = `
         <div class="board-axie-hud">
-          <div class="board-axie-hp-bar">
-            <div class="board-axie-hp-fill ${isRed ? 'red-hp' : 'blue-hp'}" style="width: 100%;"></div>
+          <div class="board-axie-bars-row">
+            <div class="board-axie-hp-bar">
+              <div class="board-axie-hp-fill ${isRed ? 'red-hp' : 'blue-hp'}" style="width: 100%;"></div>
+            </div>
+            <div class="board-axie-shield-bar" style="display: none;">
+              <div class="board-axie-shield-fill" style="width: 0%;"></div>
+            </div>
           </div>
           <span class="board-axie-tag ${isRed ? 'tag-red' : 'tag-blue'}">
             ${isRed ? '🔴' : '🔵'} #${axie.id} ${axie.class.toUpperCase()}
           </span>
         </div>
-        <canvas class="board-axie-canvas" width="140" height="110"></canvas>
+        <canvas class="board-axie-canvas" width="110" height="88"></canvas>
         <div class="board-axie-shadow"></div>
       `;
 
@@ -2300,12 +2307,12 @@ class AxieBattleGroundApp {
       const canvas = unitEl.querySelector('canvas') as HTMLCanvasElement;
       let spineEngine: AxieMixerEngine | undefined;
       if (canvas && axie.genes) {
-        const zoomScale = 0.088 + axie.row * 0.004;
+        const zoomScale = 0.074 + axie.row * 0.003;
 
         spineEngine = new AxieMixerEngine(canvas, {
           backgroundAlpha: 0,
           zoomScale: zoomScale,
-          spineOriginY: 92,
+          spineOriginY: 90,
           isFlipped: isRed, // Red faces right (flipped), Blue faces left
           defaultAnimation: 'action/idle/normal',
           autoResize: false,
@@ -2333,8 +2340,13 @@ class AxieBattleGroundApp {
         morale: stats.morale,
         maxHp: maxHp,
         currentHp: currentHp,
+        currentShield: currentShield,
         genes: axie.genes,
         cards: cards,
+        cardIndex: 0,
+        lockedTargetId: null,
+        isActing: false,
+        nextActionTime: 0,
         spineEngine: spineEngine,
         domElement: unitEl,
         isDefeated: false,
@@ -2343,7 +2355,7 @@ class AxieBattleGroundApp {
   }
 
   /* ==========================================================================
-     TACTICAL AGGRESSION & COMBAT ENGINE
+     INDEPENDENT AUTO-CHESS COMBAT ENGINE
      ========================================================================== */
 
   /**
@@ -2395,6 +2407,28 @@ class AxieBattleGroundApp {
   }
 
   /**
+   * Target Locking: Keeps attacking/chasing current target until it dies
+   */
+  private getOrAcquireLockedTarget(attacker: TacticalAxieUnit): TacticalAxieUnit | null {
+    if (attacker.lockedTargetId) {
+      const existing = this.tacticalUnits.find(
+        (u) => u.id === attacker.lockedTargetId && u.team !== attacker.team && !u.isDefeated && u.currentHp > 0
+      );
+      if (existing) {
+        return existing;
+      }
+      // Target died! Clear lock
+      attacker.lockedTargetId = null;
+    }
+
+    const newTarget = this.selectTacticalTarget(attacker);
+    if (newTarget) {
+      attacker.lockedTargetId = newTarget.id;
+    }
+    return newTarget;
+  }
+
+  /**
    * Checks if an attacker can attack a target with a given card
    * - Melee attack: MUST be side-by-side on the SAME ROW (row == target.row and |col - target.col| == 1)
    * - Ranged attack: can attack up to 3 cells away
@@ -2418,8 +2452,6 @@ class AxieBattleGroundApp {
 
   /**
    * Calculates the best next step cell towards target
-   * - Shifts row if necessary to align with target for melee
-   * - Then closes the column distance
    */
   private calculateNextStep(
     unit: TacticalAxieUnit,
@@ -2431,7 +2463,7 @@ class AxieBattleGroundApp {
 
     const candidateSteps: Array<{ r: number; c: number }> = [];
 
-    // If on different rows, prioritize shifting row to align with target
+    // If on different rows, prioritize shifting row to align with target for melee
     if (dRow !== 0) {
       candidateSteps.push({ r: unit.row + Math.sign(dRow), c: unit.col });
     }
@@ -2445,7 +2477,7 @@ class AxieBattleGroundApp {
       }
     }
 
-    // Check occupied or reserved cells
+    // Check occupied or reserved cells in 8x8 grid
     for (const step of candidateSteps) {
       if (
         step.r >= 0 &&
@@ -2462,12 +2494,11 @@ class AxieBattleGroundApp {
   }
 
   /**
-   * Executes continuous 3-step running animation across cell
+   * Executes continuous independent running animation to next cell
    */
-  private async executeSimultaneousRun(
+  private async executeUnitRun(
     unit: TacticalAxieUnit,
-    stepTarget: { r: number; c: number },
-    target: TacticalAxieUnit
+    stepTarget: { r: number; c: number }
   ): Promise<void> {
     const dCol = stepTarget.c - unit.col;
 
@@ -2477,16 +2508,15 @@ class AxieBattleGroundApp {
 
     // Face movement direction if moving horizontally
     if (dCol > 0) {
-      unit.spineEngine?.setFlipped(true); // Moving right -> face right
+      unit.spineEngine?.setFlipped(true); // Face right
     } else if (dCol < 0) {
-      unit.spineEngine?.setFlipped(false); // Moving left -> face left
+      unit.spineEngine?.setFlipped(false); // Face left
     }
 
-    // Start 2D Spine running animation (3-4 continuous running footstep strides)
+    // 2D Spine running animation
     unit.spineEngine?.setAnimation('action/run', true);
     unit.domElement?.classList.add('is-running');
 
-    // Smooth linear DOM translation
     if (unit.domElement) {
       const { leftPct, topPct } = this.getGridCellCenter(unit.row, unit.col);
       unit.domElement.style.left = `${leftPct.toFixed(2)}%`;
@@ -2494,28 +2524,56 @@ class AxieBattleGroundApp {
       unit.domElement.style.zIndex = `${15 + unit.row * 10}`;
     }
 
-    // Running stride duration (850ms)
-    await this.sleep(850);
+    await this.sleep(550);
 
     unit.domElement?.classList.remove('is-running');
 
-    // Re-face enemy side
+    // Re-face default enemy side
     const isRed = unit.team === 'red';
     unit.spineEngine?.setFlipped(isRed);
     unit.spineEngine?.setAnimation('action/idle/normal', true);
   }
 
   /**
-   * Executes simultaneous card attack (Melee lunge into adjacent cell or Ranged projectile)
+   * Executes defense card action: adds armor and plays defense animation
    */
-  private async executeSimultaneousAttack(
+  private async executeUnitDefense(
+    unit: TacticalAxieUnit,
+    card: AxieCardAbility
+  ): Promise<void> {
+    unit.domElement?.classList.add('is-defending');
+    this.showFloatingCardBadge(unit, card);
+
+    const armorGain = Math.round((card.defaultDefense || 50) * 16);
+    unit.currentShield += armorGain;
+
+    unit.spineEngine?.setAnimation('defense/hit-by-normal', false);
+    this.showFloatingShield(unit, armorGain);
+    this.updateUnitHud(unit);
+
+    const readout = document.getElementById('arena-hover-cell-readout');
+    if (readout) {
+      readout.textContent = `${unit.team === 'red' ? '🔴' : '🔵'} #${unit.id} (${unit.class}) activated [${card.skillName}] gaining 🛡️ +${armorGain.toLocaleString()} Armor!`;
+    }
+
+    await this.sleep(400);
+    unit.domElement?.classList.remove('is-defending');
+
+    if (!unit.isDefeated) {
+      unit.spineEngine?.setAnimation('action/idle/normal', true);
+    }
+  }
+
+  /**
+   * Executes attack card action (Melee lunge or Ranged projectile)
+   * Applies damage to target shield first, then target HP
+   */
+  private async executeUnitAttack(
     attacker: TacticalAxieUnit,
     target: TacticalAxieUnit,
     card: AxieCardAbility
   ): Promise<void> {
     attacker.domElement?.classList.add('is-attacking');
-
-    // Show floating card badge
     this.showFloatingCardBadge(attacker, card);
 
     const isRanged = card.expectType === 'ranged';
@@ -2525,15 +2583,14 @@ class AxieBattleGroundApp {
       attacker.spineEngine?.setAnimation('attack/ranged/cast-fly', false);
       this.spawnRangedProjectile(attacker, target);
     } else {
-      // Melee: Lunge into target cell's side
       attacker.domElement?.classList.add(isRed ? 'is-lunge-right' : 'is-lunge-left');
       attacker.spineEngine?.setAnimation('attack/melee/mouth-bite', false);
       setTimeout(() => {
         attacker.domElement?.classList.remove('is-lunge-right', 'is-lunge-left');
-      }, 320);
+      }, 300);
     }
 
-    await this.sleep(380);
+    await this.sleep(340);
 
     // Calculate Damage
     const priorityClasses = this.getAggressionPriorityTargets(attacker.class).map((s) => s.toLowerCase());
@@ -2544,26 +2601,53 @@ class AxieBattleGroundApp {
     const isCrit = Math.random() < attacker.morale / 180;
     const finalDmg = Math.round(isCrit ? baseDmg * 1.5 : baseDmg);
 
-    // Target damage & hit reaction
-    target.currentHp = Math.max(0, target.currentHp - finalDmg);
+    // Damage Absorption: Shield first, then HP
+    let remainingDamage = finalDmg;
+    let absorbedShield = 0;
+    if (target.currentShield > 0) {
+      if (target.currentShield >= remainingDamage) {
+        target.currentShield -= remainingDamage;
+        absorbedShield = remainingDamage;
+        remainingDamage = 0;
+      } else {
+        absorbedShield = target.currentShield;
+        remainingDamage -= target.currentShield;
+        target.currentShield = 0;
+      }
+    }
+
+    target.currentHp = Math.max(0, target.currentHp - remainingDamage);
     target.spineEngine?.setAnimation('defense/hit-by-normal', false);
     target.domElement?.classList.add('is-hit');
     setTimeout(() => target.domElement?.classList.remove('is-hit'), 350);
 
-    // Floating damage numbers
-    this.showFloatingDamage(target, finalDmg, isCrit, hasClassAdvantage);
+    // Floating Numbers
+    if (absorbedShield > 0) {
+      this.showFloatingDamage(target, absorbedShield, false, false, true);
+    }
+    if (remainingDamage > 0) {
+      this.showFloatingDamage(target, remainingDamage, isCrit, hasClassAdvantage, false);
+    }
 
-    // Update Target HP bar
+    // If card also provides Defense (e.g. Carrot Hammer), give armor to attacker
+    if ((card.defaultDefense || 0) > 0) {
+      const bonusArmor = Math.round(card.defaultDefense * 10);
+      attacker.currentShield += bonusArmor;
+      this.showFloatingShield(attacker, bonusArmor);
+      this.updateUnitHud(attacker);
+    }
+
     this.updateUnitHud(target);
 
     // Update Readout Ticker
     const readout = document.getElementById('arena-hover-cell-readout');
     if (readout) {
       const advText = hasClassAdvantage ? ' 🔥 +15% CLASS ADVANTAGE!' : '';
-      readout.textContent = `${attacker.team === 'red' ? '🔴' : '🔵'} #${attacker.id} (${attacker.class}) used [${card.skillName}] on ${target.team === 'red' ? '🔴' : '🔵'} #${target.id} (${target.class}) for ${finalDmg.toLocaleString()} DMG!${advText}`;
+      const shieldText = absorbedShield > 0 ? ` (🛡️ ${absorbedShield.toLocaleString()} Armor Absorbed)` : '';
+      readout.textContent = `${attacker.team === 'red' ? '🔴' : '🔵'} #${attacker.id} (${attacker.class}) used [${card.skillName}] on ${target.team === 'red' ? '🔴' : '🔵'} #${target.id} for ${finalDmg.toLocaleString()} DMG!${shieldText}${advText}`;
     }
 
-    await this.sleep(450);
+    await this.sleep(380);
     attacker.domElement?.classList.remove('is-attacking');
 
     if (!attacker.isDefeated) {
@@ -2580,29 +2664,121 @@ class AxieBattleGroundApp {
     }
   }
 
+  /**
+   * Process a single unit's independent action (Auto-Chess Tick)
+   */
+  private async processUnitAutoChessAction(unit: TacticalAxieUnit): Promise<void> {
+    if (unit.isDefeated || unit.currentHp <= 0 || unit.isActing) return;
+
+    unit.isActing = true;
+
+    try {
+      // 1. Maintain or Acquire Locked Target
+      const target = this.getOrAcquireLockedTarget(unit);
+      if (!target) {
+        unit.isActing = false;
+        unit.nextActionTime = Date.now() + 500;
+        return;
+      }
+
+      // 2. Cycle Card Sequentially 1 by 1 (no repetition at the same time)
+      const currentCard = unit.cards[unit.cardIndex % unit.cards.length];
+      unit.cardIndex = (unit.cardIndex + 1) % unit.cards.length;
+
+      const isDefenseCard =
+        (currentCard.defaultDefense || 0) > (currentCard.defaultAttack || 0) ||
+        (currentCard.defaultAttack || 0) === 0;
+
+      if (isDefenseCard) {
+        // Execute Defense / Armor action
+        await this.executeUnitDefense(unit, currentCard);
+        unit.nextActionTime = Date.now() + Math.max(650, 1350 - unit.speed * 10);
+      } else {
+        // Attack Card Action
+        if (this.isCardInRange(unit, target, currentCard)) {
+          await this.executeUnitAttack(unit, target, currentCard);
+          unit.nextActionTime = Date.now() + Math.max(700, 1400 - unit.speed * 10);
+        } else {
+          // Not in range: step towards locked target
+          const reservedCells = new Set<string>(
+            this.tacticalUnits
+              .filter((u) => !u.isDefeated && u.currentHp > 0)
+              .map((u) => `${u.row}-${u.col}`)
+          );
+
+          const stepTarget = this.calculateNextStep(unit, target, reservedCells);
+          if (stepTarget) {
+            await this.executeUnitRun(unit, stepTarget);
+            unit.nextActionTime = Date.now() + Math.max(450, 850 - unit.speed * 6);
+          } else {
+            // Path blocked or crowded
+            unit.nextActionTime = Date.now() + 300;
+          }
+        }
+      }
+    } finally {
+      unit.isActing = false;
+    }
+  }
+
   private updateUnitHud(unit: TacticalAxieUnit) {
     if (!unit.domElement) return;
+
     const hpFill = unit.domElement.querySelector('.board-axie-hp-fill') as HTMLElement;
     if (hpFill) {
       const pct = Math.max(0, Math.min(100, (unit.currentHp / unit.maxHp) * 100));
       hpFill.style.width = `${pct.toFixed(1)}%`;
     }
+
+    const shieldBar = unit.domElement.querySelector('.board-axie-shield-bar') as HTMLElement;
+    const shieldFill = unit.domElement.querySelector('.board-axie-shield-fill') as HTMLElement;
+    if (shieldBar && shieldFill) {
+      if (unit.currentShield > 0) {
+        shieldBar.style.display = 'block';
+        const shieldPct = Math.min(100, (unit.currentShield / (unit.maxHp * 0.5)) * 100);
+        shieldFill.style.width = `${Math.max(15, shieldPct).toFixed(1)}%`;
+      } else {
+        shieldBar.style.display = 'none';
+      }
+    }
   }
 
-  private showFloatingDamage(unit: TacticalAxieUnit, dmg: number, isCrit: boolean, hasAdvantage: boolean) {
+  private showFloatingDamage(
+    unit: TacticalAxieUnit,
+    dmg: number,
+    isCrit: boolean,
+    hasAdvantage: boolean,
+    isShieldAbsorb: boolean = false
+  ) {
     if (!unit.domElement) return;
     const el = document.createElement('div');
-    el.className = `floating-dmg-text ${isCrit ? 'crit' : ''}`;
-    el.textContent = `${isCrit ? '💥 ' : ''}-${dmg.toLocaleString()}${hasAdvantage ? ' (+15%)' : ''}`;
+    if (isShieldAbsorb) {
+      el.className = 'floating-shield-text';
+      el.textContent = `🛡️ -${dmg.toLocaleString()} ARMOR`;
+    } else {
+      el.className = `floating-dmg-text ${isCrit ? 'crit' : ''}`;
+      el.textContent = `${isCrit ? '💥 ' : ''}-${dmg.toLocaleString()}${hasAdvantage ? ' (+15%)' : ''}`;
+    }
     unit.domElement.appendChild(el);
     setTimeout(() => el.remove(), 1100);
+  }
+
+  private showFloatingShield(unit: TacticalAxieUnit, armor: number) {
+    if (!unit.domElement) return;
+    const el = document.createElement('div');
+    el.className = 'floating-shield-text';
+    el.textContent = `🛡️ +${armor.toLocaleString()} ARMOR`;
+    unit.domElement.appendChild(el);
+    setTimeout(() => el.remove(), 1200);
   }
 
   private showFloatingCardBadge(unit: TacticalAxieUnit, card: AxieCardAbility) {
     if (!unit.domElement) return;
     const el = document.createElement('div');
     el.className = 'floating-card-action';
-    el.textContent = `🃏 ${card.skillName} (${card.expectType === 'ranged' ? '🏹 3-Cell' : '⚔️ 1-Cell Melee'})`;
+    const isDef = (card.defaultDefense || 0) > (card.defaultAttack || 0) || (card.defaultAttack || 0) === 0;
+    const typeIcon = isDef ? '🛡️ Defense' : card.expectType === 'ranged' ? '🏹 3-Cell' : '⚔️ 1-Cell Melee';
+    el.textContent = `🃏 ${card.skillName} (${typeIcon})`;
     unit.domElement.appendChild(el);
     setTimeout(() => el.remove(), 1200);
   }
@@ -2632,8 +2808,8 @@ class AxieBattleGroundApp {
   }
 
   /**
-   * Simultaneous Tactical Battle Loop
-   * All alive units plan and act at the exact same time every round
+   * Real-Time Independent Auto-Chess Loop
+   * Each Axie unit acts and moves at its own speed without turn-based locking
    */
   private async startTacticalBattle() {
     if (this.isTacticalBattleRunning) return;
@@ -2641,23 +2817,35 @@ class AxieBattleGroundApp {
 
     const startBtn = document.getElementById('btn-start-tactical-battle');
     if (startBtn) {
-      startBtn.textContent = '⚔️ FIGHTING (SIMULTANEOUS)...';
+      startBtn.textContent = '⚔️ FIGHTING (REAL-TIME AUTO-CHESS)...';
       startBtn.classList.add('is-fighting');
     }
 
     const readout = document.getElementById('arena-hover-cell-readout');
     const roundBadge = document.getElementById('battle-round-badge');
+    if (roundBadge) roundBadge.textContent = 'REAL-TIME AUTO BATTLE';
+
+    const now = Date.now();
+    this.tacticalUnits.forEach((unit) => {
+      if (!unit.isDefeated) {
+        // Stagger initial actions slightly based on speed
+        unit.nextActionTime = now + Math.max(100, 600 - unit.speed * 8);
+        unit.isActing = false;
+        unit.lockedTargetId = null;
+      }
+    });
 
     while (this.isTacticalBattleRunning) {
-      if (roundBadge) roundBadge.textContent = `ROUND ${this.currentTacticalRound}`;
+      const currentTime = Date.now();
+
+      // Check alive units
+      const aliveRed = this.tacticalUnits.filter((u) => u.team === 'red' && !u.isDefeated && u.currentHp > 0);
+      const aliveBlue = this.tacticalUnits.filter((u) => u.team === 'blue' && !u.isDefeated && u.currentHp > 0);
 
       // Check win condition
-      const aliveRed = this.tacticalUnits.filter((u: TacticalAxieUnit) => u.team === 'red' && !u.isDefeated && u.currentHp > 0);
-      const aliveBlue = this.tacticalUnits.filter((u: TacticalAxieUnit) => u.team === 'blue' && !u.isDefeated && u.currentHp > 0);
-
       if (aliveRed.length === 0 || aliveBlue.length === 0) {
         const winner = aliveRed.length > 0 ? '🔴 RED TEAM WINS!' : aliveBlue.length > 0 ? '🔵 BLUE TEAM WINS!' : 'DRAW!';
-        if (readout) readout.textContent = `🏆 BATTLE ENDED: ${winner}`;
+        if (readout) readout.textContent = `🏆 AUTO BATTLE ENDED: ${winner}`;
         if (startBtn) {
           startBtn.textContent = '⚔️ START BATTLE';
           startBtn.classList.remove('is-fighting');
@@ -2666,92 +2854,17 @@ class AxieBattleGroundApp {
         break;
       }
 
-      // Collect all alive units for simultaneous action planning
-      const allAliveUnits = [...aliveRed, ...aliveBlue];
-
-      // 1. PLAN PHASE: All units simultaneously decide to Attack or Move
-      const movingUnits: Array<{
-        unit: TacticalAxieUnit;
-        target: TacticalAxieUnit;
-        stepTarget: { r: number; c: number };
-      }> = [];
-
-      const attackingUnits: Array<{
-        unit: TacticalAxieUnit;
-        target: TacticalAxieUnit;
-        card: AxieCardAbility;
-      }> = [];
-
-      const reservedCells = new Set<string>(
-        allAliveUnits.map((u: TacticalAxieUnit) => `${u.row}-${u.col}`)
-      );
-
-      for (const unit of allAliveUnits) {
-        const target = this.selectTacticalTarget(unit);
-        if (!target) continue;
-
-        // Check if any card is in range
-        const attackCards = unit.cards.filter((c: AxieCardAbility) => (c.defaultAttack || 0) > 0);
-        const validCards = attackCards.filter((c: AxieCardAbility) => this.isCardInRange(unit, target, c));
-
-        if (validCards.length > 0) {
-          // Unit can attack this round
-          const chosenCard = validCards[Math.floor(Math.random() * validCards.length)];
-          attackingUnits.push({ unit, target, card: chosenCard });
-        } else {
-          // Unit needs to move closer / shift row for melee
-          const stepTarget = this.calculateNextStep(unit, target, reservedCells);
-          if (stepTarget) {
-            reservedCells.add(`${stepTarget.r}-${stepTarget.c}`);
-            movingUnits.push({ unit, target, stepTarget });
-          }
+      // Process each alive unit independently
+      const allAlive = [...aliveRed, ...aliveBlue];
+      for (const unit of allAlive) {
+        if (!unit.isActing && currentTime >= unit.nextActionTime) {
+          // Trigger independent asynchronous action
+          this.processUnitAutoChessAction(unit);
         }
       }
 
-      // 2. SIMULTANEOUS MOVEMENT EXECUTION
-      if (movingUnits.length > 0) {
-        await Promise.all(
-          movingUnits.map((item) => this.executeSimultaneousRun(item.unit, item.stepTarget, item.target))
-        );
-      }
-
-      // Check if moving units are now in range to perform a follow-up attack this round
-      for (const item of movingUnits) {
-        if (item.unit.currentHp > 0 && !item.unit.isDefeated && item.target.currentHp > 0 && !item.target.isDefeated) {
-          const attackCards = item.unit.cards.filter((c: AxieCardAbility) => (c.defaultAttack || 0) > 0);
-          const validCards = attackCards.filter((c: AxieCardAbility) => this.isCardInRange(item.unit, item.target, c));
-          if (validCards.length > 0 && !attackingUnits.some((a) => a.unit.id === item.unit.id)) {
-            const chosenCard = validCards[Math.floor(Math.random() * validCards.length)];
-            attackingUnits.push({ unit: item.unit, target: item.target, card: chosenCard });
-          }
-        }
-      }
-
-      // 3. SIMULTANEOUS ATTACK EXECUTION
-      if (attackingUnits.length > 0) {
-        await Promise.all(
-          attackingUnits
-            .filter((item) => item.unit.currentHp > 0 && !item.unit.isDefeated && item.target.currentHp > 0 && !item.target.isDefeated)
-            .map((item) => this.executeSimultaneousAttack(item.unit, item.target, item.card))
-        );
-      }
-
-      // 4. Check if battle concluded
-      const checkRed = this.tacticalUnits.filter((u: TacticalAxieUnit) => u.team === 'red' && !u.isDefeated && u.currentHp > 0);
-      const checkBlue = this.tacticalUnits.filter((u: TacticalAxieUnit) => u.team === 'blue' && !u.isDefeated && u.currentHp > 0);
-      if (checkRed.length === 0 || checkBlue.length === 0) {
-        const winner = checkRed.length > 0 ? '🔴 RED TEAM WINS!' : checkBlue.length > 0 ? '🔵 BLUE TEAM WINS!' : 'DRAW!';
-        if (readout) readout.textContent = `🏆 BATTLE ENDED: ${winner}`;
-        if (startBtn) {
-          startBtn.textContent = '⚔️ START BATTLE';
-          startBtn.classList.remove('is-fighting');
-        }
-        this.isTacticalBattleRunning = false;
-        break;
-      }
-
-      this.currentTacticalRound++;
-      await this.sleep(650);
+      // Fast tick rate (30 FPS check)
+      await this.sleep(35);
     }
   }
 
@@ -2766,20 +2879,25 @@ class AxieBattleGroundApp {
     }
 
     const roundBadge = document.getElementById('battle-round-badge');
-    if (roundBadge) roundBadge.textContent = 'ROUND 1';
+    if (roundBadge) roundBadge.textContent = 'REAL-TIME AUTO BATTLE';
 
     const readout = document.getElementById('arena-hover-cell-readout');
     if (readout) readout.textContent = 'Click START BATTLE to begin!';
 
-    // Reset units to initial position and full HP
+    // Reset units to initial position, full HP, zero shield, and reset card queues
     this.tacticalUnits.forEach((unit) => {
       unit.row = unit.initialRow;
       unit.col = unit.initialCol;
       unit.currentHp = unit.maxHp;
+      unit.currentShield = 0;
+      unit.cardIndex = 0;
+      unit.lockedTargetId = null;
+      unit.isActing = false;
+      unit.nextActionTime = 0;
       unit.isDefeated = false;
 
       if (unit.domElement) {
-        unit.domElement.classList.remove('is-defeated', 'is-attacking', 'is-hit');
+        unit.domElement.classList.remove('is-defeated', 'is-attacking', 'is-defending', 'is-hit', 'is-running');
         const { leftPct, topPct } = this.getGridCellCenter(unit.row, unit.col);
         unit.domElement.style.left = `${leftPct.toFixed(2)}%`;
         unit.domElement.style.top = `${topPct.toFixed(2)}%`;

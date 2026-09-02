@@ -3204,13 +3204,38 @@ input:checked + .slider-toggle:before {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.95));
 }
 
+.board-axie-bars-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
 .board-axie-hp-bar {
-  width: 46px;
+  width: 44px;
   height: 5px;
   background: rgba(0, 0, 0, 0.75);
   border-radius: 3px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.board-axie-shield-bar {
+  width: 22px;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 229, 255, 0.7);
+  box-shadow: 0 0 6px rgba(0, 229, 255, 0.4);
+}
+
+.board-axie-shield-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #00e5ff, #3b82f6);
+  box-shadow: 0 0 6px #00e5ff;
+  transition: width 0.25s ease;
 }
 
 .board-axie-hp-fill {
@@ -3432,8 +3457,13 @@ input:checked + .slider-toggle:before {
   box-shadow: none !important;
 }
 
+.arena-board-axie.is-defending {
+  filter: drop-shadow(0 0 18px rgba(0, 229, 255, 0.95)) !important;
+  z-index: 70 !important;
+}
+
 .arena-board-axie.is-attacking {
-  filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) !important;
+  filter: drop-shadow(0 0 18px rgba(245, 158, 11, 0.95)) !important;
   z-index: 70 !important;
 }
 
@@ -3446,6 +3476,29 @@ input:checked + .slider-toggle:before {
   25% { transform: translate(-45%, -78%) rotate(3deg); }
   50% { transform: translate(-55%, -78%) rotate(-3deg); }
   75% { transform: translate(-48%, -78%) rotate(2deg); }
+}
+
+.floating-shield-text {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-heading);
+  font-size: 11px;
+  font-weight: 800;
+  color: #00e5ff;
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.95), 0 2px 4px #000;
+  animation: floatShieldUp 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  pointer-events: none;
+  z-index: 100;
+  white-space: nowrap;
+}
+
+@keyframes floatShieldUp {
+  0% { opacity: 0; transform: translate(-50%, 0) scale(0.8); }
+  20% { opacity: 1; transform: translate(-50%, -8px) scale(1.1); }
+  80% { opacity: 1; transform: translate(-50%, -20px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -32px) scale(0.9); }
 }
 
 
