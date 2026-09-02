@@ -1923,30 +1923,41 @@ class AxieBattleGroundApp {
   private isTacticalBattleRunning: boolean = false;
   private currentTacticalRound: number = 1;
 
-  // Calibrated Grid Perspective Geometry
-  private readonly ARENA_GRID_Y_LINES = [174, 220, 275, 335, 397]; // 5 horizontal lines -> 4 rows
-  private readonly ARENA_GRID_V_LINES = [
-    { top: 80.4, bottom: 18.4 },   // Col 0 left
-    { top: 181.6, bottom: 136.8 }, // Col 1 left / Col 0 right
-    { top: 289.3, bottom: 257.6 }, // Col 2 left / Col 1 right (End Red Zone)
-    { top: 398.8, bottom: 381.6 }, // Col 3 left / Col 2 right
-    { top: 513.5, bottom: 508.2 }, // Col 4 left / Col 3 right (Center line)
-    { top: 618.0, bottom: 627.2 }, // Col 5 left / Col 4 right
-    { top: 716.5, bottom: 740.3 }, // Col 6 left / Col 5 right (Start Blue Zone)
-    { top: 821.6, bottom: 863.8 }, // Col 7 left / Col 6 right
-    { top: 927.0, bottom: 985.0 }  // Col 7 right
+  // Calibrated Grid Perspective Geometry for 8x8 World (8 Rows x 8 Columns = 64 Cells)
+  private readonly ARENA_GRID_Y_LINES = [
+    148, // Row 0 top
+    184, // Row 1 top / Row 0 bot
+    222, // Row 2 top / Row 1 bot
+    264, // Row 3 top / Row 2 bot
+    310, // Row 4 top / Row 3 bot
+    360, // Row 5 top / Row 4 bot
+    414, // Row 6 top / Row 5 bot
+    472, // Row 7 top / Row 6 bot
+    534  // Row 7 bot
   ];
 
-  // 6 Tactical Demo Axies starting from ID 300
+  private readonly ARENA_GRID_V_LINES = [
+    { top: 228, bottom: 96 },   // Col 0 left
+    { top: 302, bottom: 204 },  // Col 1 left / Col 0 right
+    { top: 380, bottom: 316 },  // Col 2 left / Col 1 right (End Red Zone)
+    { top: 458, bottom: 430 },  // Col 3 left / Col 2 right
+    { top: 536, bottom: 544 },  // Col 4 left / Col 3 right (Center line)
+    { top: 614, bottom: 658 },  // Col 5 left / Col 4 right
+    { top: 692, bottom: 772 },  // Col 6 left / Col 5 right (Start Blue Zone)
+    { top: 770, bottom: 884 },  // Col 7 left / Col 6 right
+    { top: 848, bottom: 994 }   // Col 7 right
+  ];
+
+  // 8 Tactical Demo Axies starting from ID 300 on 8x8 Grid
   private readonly BOARD_AXIES_LINEUP = [
-    // --- RED TEAM (3 AXIES) ---
+    // --- RED TEAM (4 AXIES) ---
     {
       id: '300',
       name: 'Axie #300',
       class: 'Plant',
       team: 'red' as const,
-      row: 1, // Row 2 (0-indexed 1)
-      col: 1, // Col 2 (0-indexed 1, Frontline Red)
+      row: 2, // Row 3
+      col: 1, // Col 2 (Frontline Red)
       genes: '0x180000000000030001c08050410800000003000c104081040001000008404402000200800800c0040001000810a08002000100041060c0060001000c18a0c206'
     },
     {
@@ -1954,8 +1965,8 @@ class AxieBattleGroundApp {
       name: 'Axie #301',
       class: 'Plant',
       team: 'red' as const,
-      row: 0, // Row 1 (0-indexed 0, Top Backline Red)
-      col: 0, // Col 1 (0-indexed 0)
+      row: 5, // Row 6
+      col: 1, // Col 2 (Frontline Red)
       genes: '0x180000000000030003810020c400000000000084080045040001001410404502000100041840c5020001000c18a044040001000c0860c5040001000808a0c406'
     },
     {
@@ -1963,28 +1974,37 @@ class AxieBattleGroundApp {
       name: 'Axie #302',
       class: 'Bird',
       team: 'red' as const,
-      row: 2, // Row 3 (0-indexed 2, Bottom Backline Red)
-      col: 0, // Col 1 (0-indexed 0)
+      row: 1, // Row 2
+      col: 0, // Col 1 (Top Backline Red)
       genes: '0x100000000000030001014051020800000001000810204204000100001040840400010008108080040001000408604406000100041020c5060001000818604006'
     },
+    {
+      id: '306',
+      name: 'Axie #306',
+      class: 'Beast',
+      team: 'red' as const,
+      row: 6, // Row 7
+      col: 0, // Col 1 (Bottom Backline Red)
+      genes: '0x30000010001000c0000000100001000820400010004104080020001000008a0c302000100001020c2040001000c08a043060001000410208006'
+    },
 
-    // --- BLUE TEAM (3 AXIES) ---
+    // --- BLUE TEAM (4 AXIES) ---
     {
       id: '303',
       name: 'Axie #303',
       class: 'Aquatic',
       team: 'blue' as const,
-      row: 1, // Row 2 (0-indexed 1, Frontline Blue)
-      col: 6, // Col 7 (0-indexed 6)
+      row: 2, // Row 3
+      col: 6, // Col 7 (Frontline Blue)
       genes: '0x200000000000030001804050c210000000030010108045040001001410a080020003001008804204000300101880830200030004182045020003001018804506'
     },
     {
       id: '304',
       name: 'Axie #304',
-      class: 'Aquatic',
+      class: 'Reptile',
       team: 'blue' as const,
-      row: 0, // Row 1 (0-indexed 0, Top Backline Blue)
-      col: 7, // Col 8 (0-indexed 7)
+      row: 5, // Row 6
+      col: 6, // Col 7 (Frontline Blue)
       genes: '0x200000000000030001408080020c000000010014084040040001001008004202000100101020c302000000880860840600010010080083040001000010008302'
     },
     {
@@ -1992,9 +2012,18 @@ class AxieBattleGroundApp {
       name: 'Axie #305',
       class: 'Beast',
       team: 'blue' as const,
-      row: 2, // Row 3 (0-indexed 2, Bottom Backline Blue)
-      col: 7, // Col 8 (0-indexed 7)
+      row: 1, // Row 2
+      col: 7, // Col 8 (Top Backline Blue)
       genes: '0x30000010001000c0000000100001000820400010004104080020001000008a0c302000100001020c2040001000c08a043060001000410208006'
+    },
+    {
+      id: '307',
+      name: 'Axie #307',
+      class: 'Aquatic',
+      team: 'blue' as const,
+      row: 6, // Row 7
+      col: 7, // Col 8 (Bottom Backline Blue)
+      genes: '0x200000000000030001408080020c000000010014084040040001001008004202000100101020c302000000880860840600010010080083040001000010008302'
     }
   ];
 
@@ -2039,13 +2068,13 @@ class AxieBattleGroundApp {
     const yLines = this.ARENA_GRID_Y_LINES;
     const vLines = this.ARENA_GRID_V_LINES;
     const topY0 = yLines[0];
-    const botY4 = yLines[4];
+    const botY8 = yLines[8];
 
     const yTop = yLines[row];
     const yBot = yLines[row + 1];
 
-    const tTop = (yTop - topY0) / (botY4 - topY0);
-    const tBot = (yBot - topY0) / (botY4 - topY0);
+    const tTop = (yTop - topY0) / (botY8 - topY0);
+    const tBot = (yBot - topY0) / (botY8 - topY0);
 
     const xTopLeft = vLines[col].top + (vLines[col].bottom - vLines[col].top) * tTop;
     const xTopRight = vLines[col + 1].top + (vLines[col + 1].bottom - vLines[col + 1].top) * tTop;
@@ -2056,7 +2085,7 @@ class AxieBattleGroundApp {
     const cy = (yTop + yBot) / 2;
 
     const leftPct = (cx / 1024) * 100;
-    const topPct = (cy / 409) * 100;
+    const topPct = (cy / 576) * 100;
 
     return { cx, cy, leftPct, topPct };
   }
@@ -2072,14 +2101,14 @@ class AxieBattleGroundApp {
     const yLines = this.ARENA_GRID_Y_LINES;
     const vLines = this.ARENA_GRID_V_LINES;
     const topY0 = yLines[0];
-    const botY4 = yLines[4];
+    const botY8 = yLines[8];
 
-    // Build 5x9 vertex matrix
+    // Build 9x9 vertex matrix (8 rows x 8 columns)
     const gridVertices: Array<Array<{ x: number; y: number }>> = [];
 
     for (let r = 0; r < yLines.length; r++) {
       const y = yLines[r];
-      const t = (y - topY0) / (botY4 - topY0);
+      const t = (y - topY0) / (botY8 - topY0);
       const row: Array<{ x: number; y: number }> = [];
 
       for (let c = 0; c < vLines.length; c++) {
@@ -2089,8 +2118,8 @@ class AxieBattleGroundApp {
       gridVertices.push(row);
     }
 
-    // Generate 32 Cells (4 Rows x 8 Columns) without text labels
-    for (let r = 0; r < 4; r++) {
+    // Generate 64 Cells (8 Rows x 8 Columns) without text labels
+    for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {
         const cellId = `R${r + 1}-C${c + 1}`;
         const p0 = gridVertices[r][c];
@@ -2098,10 +2127,10 @@ class AxieBattleGroundApp {
         const p2 = gridVertices[r + 1][c + 1];
         const p3 = gridVertices[r + 1][c];
 
-        // Determine Zone:
-        // First 8 cells (Cols 0 & 1 -> c < 2): Red Zone
-        // Rightmost 8 cells (Cols 6 & 7 -> c >= 6): Blue Zone
-        // Middle 16 cells (Cols 2..5): Neutral Zone
+        // Determine Zone in 8x8 Grid:
+        // Leftmost 16 cells (Cols 0 & 1 -> c < 2): Red Zone
+        // Rightmost 16 cells (Cols 6 & 7 -> c >= 6): Blue Zone
+        // Center 32 cells (Cols 2..5): Neutral Zone
         const isRedZone = c < 2;
         const isBlueZone = c >= 6;
         const zoneClass = isRedZone ? 'cell-red' : isBlueZone ? 'cell-blue' : 'cell-neutral';
@@ -2420,7 +2449,7 @@ class AxieBattleGroundApp {
     for (const step of candidateSteps) {
       if (
         step.r >= 0 &&
-        step.r < 4 &&
+        step.r < 8 &&
         step.c >= 0 &&
         step.c < 8 &&
         !reservedCells.has(`${step.r}-${step.c}`)

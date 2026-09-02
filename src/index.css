@@ -3026,7 +3026,7 @@ input:checked + .slider-toggle:before {
 .arena-board-aspect-box {
   position: relative;
   width: 100%;
-  aspect-ratio: 1024 / 409;
+  aspect-ratio: 1024 / 576;
   max-height: calc(100vh - 150px);
   border-radius: 16px;
   overflow: hidden;

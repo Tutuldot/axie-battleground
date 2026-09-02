@@ -954,10 +954,10 @@
         <div class="arena-board-wrapper">
           <div class="arena-board-aspect-box">
             <!-- Background Image -->
-            <img class="arena-bg-img" src="/arena-bg.png" alt="Axie Battleground Arena" />
+            <img class="arena-bg-img" src="/arena-bg-8x8.jpg" alt="Axie Battleground Arena" />
 
-            <!-- SVG Grid Overlay with exact 1024x409 viewBox -->
-            <svg id="arena-grid-svg" class="arena-grid-svg" viewBox="0 0 1024 409" preserveAspectRatio="none">
+            <!-- SVG Grid Overlay with exact 1024x576 viewBox -->
+            <svg id="arena-grid-svg" class="arena-grid-svg" viewBox="0 0 1024 576" preserveAspectRatio="none">
               <defs>
                 <filter id="glow-red" x="-20%" y="-20%" width="140%" height="140%">
                   <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#ef4444" flood-opacity="0.8"/>
@@ -982,15 +982,15 @@
       <footer class="arena-grid-footer">
         <div class="arena-footer-pill red-zone-pill">
           <span class="pill-dot red"></span>
-          <span><strong>RED PLACEMENT:</strong> First 8 Cells (Cols 1-2)</span>
+          <span><strong>RED PLACEMENT:</strong> Left 16 Cells (Cols 1-2, Rows 1-8)</span>
         </div>
         <div class="arena-footer-pill neutral-zone-pill">
           <span class="pill-dot neutral"></span>
-          <span><strong>NEUTRAL ARENA:</strong> 16 Movement Cells (Cols 3-6)</span>
+          <span><strong>NEUTRAL ARENA:</strong> 32 Movement Cells (Cols 3-6, Rows 1-8)</span>
         </div>
         <div class="arena-footer-pill blue-zone-pill">
           <span class="pill-dot blue"></span>
-          <span><strong>BLUE PLACEMENT:</strong> Rightmost 8 Cells (Cols 7-8)</span>
+          <span><strong>BLUE PLACEMENT:</strong> Right 16 Cells (Cols 7-8, Rows 1-8)</span>
         </div>
       </footer>
     </div>
