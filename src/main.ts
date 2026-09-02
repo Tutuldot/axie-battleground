@@ -2059,16 +2059,13 @@ class AxieBattleGroundApp {
     const yTop = yLines[row];
     const yBot = yLines[row + 1];
 
-    const tTop = (yTop - topY0) / (botY8 - topY0);
-    const tBot = (yBot - topY0) / (botY8 - topY0);
+    // Ground perspective center inside the cell quad (58% down towards wider bottom edge)
+    const cy = yTop + (yBot - yTop) * 0.58;
+    const t = (cy - topY0) / (botY8 - topY0);
 
-    const xTopLeft = vLines[col].top + (vLines[col].bottom - vLines[col].top) * tTop;
-    const xTopRight = vLines[col + 1].top + (vLines[col + 1].bottom - vLines[col + 1].top) * tTop;
-    const xBotLeft = vLines[col].top + (vLines[col].bottom - vLines[col].top) * tBot;
-    const xBotRight = vLines[col + 1].top + (vLines[col + 1].bottom - vLines[col + 1].top) * tBot;
-
-    const cx = (xTopLeft + xTopRight + xBotLeft + xBotRight) / 4;
-    const cy = (yTop + yBot) / 2;
+    const xLeft = vLines[col].top + (vLines[col].bottom - vLines[col].top) * t;
+    const xRight = vLines[col + 1].top + (vLines[col + 1].bottom - vLines[col + 1].top) * t;
+    const cx = (xLeft + xRight) / 2;
 
     const leftPct = (cx / 1024) * 100;
     const topPct = (cy / 576) * 100;
@@ -2276,11 +2273,8 @@ class AxieBattleGroundApp {
               <div class="board-axie-shield-fill" style="width: 0%;"></div>
             </div>
           </div>
-          <span class="board-axie-tag ${isRed ? 'tag-red' : 'tag-blue'}">
-            ${isRed ? '🔴' : '🔵'} #${axie.id} ${axie.class.toUpperCase()}
-          </span>
         </div>
-        <canvas class="board-axie-canvas" width="110" height="88"></canvas>
+        <canvas class="board-axie-canvas" width="180" height="150"></canvas>
         <div class="board-axie-shadow"></div>
       `;
 
@@ -2307,12 +2301,12 @@ class AxieBattleGroundApp {
       const canvas = unitEl.querySelector('canvas') as HTMLCanvasElement;
       let spineEngine: AxieMixerEngine | undefined;
       if (canvas && axie.genes) {
-        const zoomScale = 0.074 + axie.row * 0.003;
+        const zoomScale = 0.080 + axie.row * 0.003;
 
         spineEngine = new AxieMixerEngine(canvas, {
           backgroundAlpha: 0,
           zoomScale: zoomScale,
-          spineOriginY: 90,
+          spineOriginY: 96,
           isFlipped: isRed, // Red faces right (flipped), Blue faces left
           defaultAnimation: 'action/idle/normal',
           autoResize: false,
@@ -2657,8 +2651,6 @@ class AxieBattleGroundApp {
     if (target.currentHp <= 0) {
       target.isDefeated = true;
       target.domElement?.classList.add('is-defeated');
-      const tag = target.domElement?.querySelector('.board-axie-tag');
-      if (tag) tag.textContent = `💀 #${target.id} DEFEATED`;
     } else {
       target.spineEngine?.setAnimation('action/idle/normal', true);
     }
@@ -2902,12 +2894,6 @@ class AxieBattleGroundApp {
         unit.domElement.style.left = `${leftPct.toFixed(2)}%`;
         unit.domElement.style.top = `${topPct.toFixed(2)}%`;
         unit.domElement.style.zIndex = `${15 + unit.row * 10}`;
-
-        const isRed = unit.team === 'red';
-        const tag = unit.domElement.querySelector('.board-axie-tag');
-        if (tag) {
-          tag.textContent = `${isRed ? '🔴' : '🔵'} #${unit.id} ${unit.class.toUpperCase()}`;
-        }
 
         this.updateUnitHud(unit);
       }
