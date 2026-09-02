@@ -1923,29 +1923,29 @@ class AxieBattleGroundApp {
   private isTacticalBattleRunning: boolean = false;
   private currentTacticalRound: number = 1;
 
-  // Calibrated Grid Perspective Geometry for 8x8 World (8 Rows x 8 Columns = 64 Cells)
+  // Calibrated Grid Perspective Geometry for Grounded 8x8 Arena (8 Rows x 8 Columns = 64 Cells)
   private readonly ARENA_GRID_Y_LINES = [
-    148, // Row 0 top
-    184, // Row 1 top / Row 0 bot
-    222, // Row 2 top / Row 1 bot
-    264, // Row 3 top / Row 2 bot
-    310, // Row 4 top / Row 3 bot
-    360, // Row 5 top / Row 4 bot
+    180, // Row 0 top
+    214, // Row 1 top / Row 0 bot
+    250, // Row 2 top / Row 1 bot
+    288, // Row 3 top / Row 2 bot
+    328, // Row 4 top / Row 3 bot
+    370, // Row 5 top / Row 4 bot
     414, // Row 6 top / Row 5 bot
-    472, // Row 7 top / Row 6 bot
-    534  // Row 7 bot
+    460, // Row 7 top / Row 6 bot
+    508  // Row 7 bot
   ];
 
   private readonly ARENA_GRID_V_LINES = [
-    { top: 228, bottom: 96 },   // Col 0 left
-    { top: 302, bottom: 204 },  // Col 1 left / Col 0 right
-    { top: 380, bottom: 316 },  // Col 2 left / Col 1 right (End Red Zone)
-    { top: 458, bottom: 430 },  // Col 3 left / Col 2 right
-    { top: 536, bottom: 544 },  // Col 4 left / Col 3 right (Center line)
-    { top: 614, bottom: 658 },  // Col 5 left / Col 4 right
-    { top: 692, bottom: 772 },  // Col 6 left / Col 5 right (Start Blue Zone)
-    { top: 770, bottom: 884 },  // Col 7 left / Col 6 right
-    { top: 848, bottom: 994 }   // Col 7 right
+    { top: 245, bottom: 110 },  // Col 0 left
+    { top: 314, bottom: 211 },  // Col 1 left / Col 0 right
+    { top: 383, bottom: 312 },  // Col 2 left / Col 1 right (End Red Zone)
+    { top: 451, bottom: 412 },  // Col 3 left / Col 2 right
+    { top: 520, bottom: 513 },  // Col 4 left / Col 3 right (Center line)
+    { top: 589, bottom: 613 },  // Col 5 left / Col 4 right
+    { top: 657, bottom: 714 },  // Col 6 left / Col 5 right (Start Blue Zone)
+    { top: 726, bottom: 814 },  // Col 7 left / Col 6 right
+    { top: 795, bottom: 915 }   // Col 7 right
   ];
 
   // 8 Tactical Demo Axies starting from ID 300 on 8x8 Grid
