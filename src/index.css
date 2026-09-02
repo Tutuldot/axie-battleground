@@ -3196,7 +3196,7 @@ input:checked + .slider-toggle:before {
 /* Overhead Unit HUD */
 .board-axie-hud {
   position: absolute;
-  top: -8px;
+  top: 18px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -3204,6 +3204,7 @@ input:checked + .slider-toggle:before {
   align-items: center;
   pointer-events: none;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.95));
+  z-index: 10;
 }
 
 .board-axie-bars-row {
@@ -3261,16 +3262,6 @@ input:checked + .slider-toggle:before {
   display: block;
   pointer-events: none;
   filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.45));
-}
-
-/* Ground Shadow */
-.board-axie-shadow {
-  width: 52px;
-  height: 12px;
-  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0) 72%);
-  border-radius: 50%;
-  margin-top: -16px;
-  pointer-events: none;
 }
 
 /* Battle Controls */

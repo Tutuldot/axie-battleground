@@ -2275,7 +2275,6 @@ class AxieBattleGroundApp {
           </div>
         </div>
         <canvas class="board-axie-canvas" width="180" height="150"></canvas>
-        <div class="board-axie-shadow"></div>
       `;
 
       unitEl.addEventListener('mouseenter', () => {
