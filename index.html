@@ -52,6 +52,24 @@
           <button id="btn-open-mixer-studio" class="dash-tab-btn highlight-tab">🎨 Axie Mixer Studio</button>
         </nav>
 
+        <!-- Axie Origins Audio Control Bar -->
+        <div class="header-audio-controller">
+          <div class="audio-ctrl-chip">
+            <span class="audio-icon-pulse">🎵</span>
+            <select id="select-global-bgm" class="audio-track-select" title="Change Background Music">
+              <option value="home">Home (Origins)</option>
+              <option value="pvp">PvP Arena</option>
+              <option value="pve_1">Training Ground</option>
+              <option value="boss">Boss Raid</option>
+              <option value="summer23">Summer Theme</option>
+              <option value="lunar_battle">Lunar Battle</option>
+            </select>
+            <button id="btn-global-bgm-play" class="audio-ctrl-btn" title="Play/Pause Music">▶️</button>
+            <button id="btn-global-bgm-mute" class="audio-ctrl-btn" title="Mute/Unmute">🔊</button>
+            <input type="range" id="slider-global-bgm" min="0" max="1" step="0.05" value="0.35" class="audio-mini-slider" title="BGM Volume" />
+          </div>
+        </div>
+
         <!-- Player Profile & Resources -->
         <div class="player-profile-bar">
           <div class="player-info">
@@ -600,6 +618,24 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: 1rem;">
+          <!-- Studio Audio Control Bar -->
+          <div class="header-audio-controller" style="margin: 0;">
+            <div class="audio-ctrl-chip">
+              <span class="audio-icon-pulse">🎵</span>
+              <select id="select-studio-bgm" class="audio-track-select" title="Change Background Music">
+                <option value="home">Home (Origins)</option>
+                <option value="pvp">PvP Arena</option>
+                <option value="pve_1">Training Ground</option>
+                <option value="boss">Boss Raid</option>
+                <option value="summer23">Summer Theme</option>
+                <option value="lunar_battle">Lunar Battle</option>
+              </select>
+              <button id="btn-studio-bgm-play" class="audio-ctrl-btn" title="Play/Pause Music">▶️</button>
+              <button id="btn-studio-bgm-mute" class="audio-ctrl-btn" title="Mute/Unmute">🔊</button>
+              <input type="range" id="slider-studio-bgm" min="0" max="1" step="0.05" value="0.35" class="audio-mini-slider" title="BGM Volume" />
+            </div>
+          </div>
+
           <button id="btn-back-to-game" class="btn btn-primary">
             ⚔️ Back to Axie Battle Ground
           </button>
@@ -655,6 +691,7 @@
         <!-- CENTER VIEWPORT: PixiJS Canvas & Interactive Controls -->
         <section class="canvas-container">
           <canvas id="pixi-canvas" class="pixi-canvas"></canvas>
+          <canvas id="studio-vfx-canvas" class="vfx-overlay-canvas"></canvas>
 
           <!-- Floating Interactive Control Bar -->
           <div class="canvas-controls">
@@ -740,6 +777,41 @@
             </div>
             <div id="animations-grid" class="anim-grid">
               <!-- Animation buttons inserted dynamically -->
+            </div>
+          </div>
+
+          <!-- Origins Battle VFX & SFX Lab -->
+          <div class="panel-card origins-vfx-panel">
+            <div class="panel-title">
+              <span>✨ Origins VFX & Audio Lab</span>
+              <span class="badge" style="background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4);">Origins Kit</span>
+            </div>
+            <div class="vfx-lab-controls">
+              <div class="vfx-lab-tab-bar">
+                <button id="tab-vfx-skills" class="vfx-lab-tab-btn active">💥 Skills (63)</button>
+                <button id="tab-vfx-buffs" class="vfx-lab-tab-btn">🛡️ Buffs (42)</button>
+              </div>
+              <div class="input-group" style="margin-top: 0.6rem; margin-bottom: 0.5rem;">
+                <select id="select-vfx-clip" class="text-input" style="padding: 0.45rem 0.6rem; font-size: 0.82rem;">
+                  <!-- Populated dynamically with all skill/buff VFX -->
+                </select>
+              </div>
+              <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: space-between;">
+                <button id="btn-play-vfx" class="btn btn-primary btn-sm" style="flex: 1; font-weight: 700;">
+                  ▶️ Cast VFX + SFX
+                </button>
+                <button id="btn-stop-vfx" class="btn btn-sm" style="padding: 0.4rem 0.6rem;">
+                  ⏹️
+                </button>
+              </div>
+              <div id="vfx-info-pill" class="vfx-info-pill" style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-muted);">
+                Select a skill or buff above to inspect timeline & play additive VFX!
+              </div>
+              <div class="vfx-sfx-triggers-row" style="display: flex; gap: 0.35rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                <button id="btn-test-sfx-attack" class="btn-xs" title="Test Attack Sound">⚔️ Attack SFX</button>
+                <button id="btn-test-sfx-fly" class="btn-xs" title="Test Flight Sound">🏹 Fly SFX</button>
+                <button id="btn-test-sfx-hit" class="btn-xs" title="Test Hit Sound">💥 Hit SFX</button>
+              </div>
             </div>
           </div>
 
@@ -974,6 +1046,9 @@
 
             <!-- 2D Spine Axies Container Layer -->
             <div id="arena-units-container" class="arena-units-container"></div>
+
+            <!-- Origins Additive Battle VFX Overlay Canvas -->
+            <canvas id="arena-vfx-canvas" class="vfx-overlay-canvas"></canvas>
           </div>
         </div>
       </main>

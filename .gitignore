@@ -29,3 +29,6 @@ pnpm-debug.log*
 *.sw?
 .DS_Store
 Thumbs.db
+
+# Cloned reference kits / local raw assets
+axie-origins-asset-kit/

@@ -11,6 +11,15 @@ import {
 import { calculateAxieClassicStats } from './axie/stats-calculator';
 import { TeamManager, TeamRole, AxieTeam } from './game/team-manager';
 import { getAxieBodyStructure512 } from '@axieinfinity/mixer';
+import { audioManager, MusicTrack } from './audio/audio-manager';
+import { loadCatalog, loadClip, CatalogItem, VfxClip } from './vfx/clip';
+import {
+  AdditiveAtlas,
+  playOnCanvas,
+  loadSkillVfxDatabase,
+  getVfxForAbility,
+  PlayHandle,
+} from './vfx/vfx-player';
 
 export interface TacticalAxieUnit {
   id: string;
@@ -52,6 +61,15 @@ class AxieBattleGroundApp {
   private tempSquadMap: Map<string, TeamRole> = new Map();
   private editingTeamId: string = 'team-1';
 
+  // Origins Battle VFX & Audio State
+  private studioVfxCanvas?: HTMLCanvasElement;
+  private studioVfxCtx?: CanvasRenderingContext2D;
+  private arenaVfxCanvas?: HTMLCanvasElement;
+  private arenaVfxCtx?: CanvasRenderingContext2D;
+  private activeStudioVfxHandle: PlayHandle | null = null;
+  private vfxCatalog: { skills: CatalogItem[]; buffs: CatalogItem[] } = { skills: [], buffs: [] };
+  private vfxLabMode: 'skill' | 'buff' = 'skill';
+
   // Dedicated Edit Team Page State (NO LIGHTBOX)
   private editMobileActiveTab: 'squad' | 'inventory' = 'squad';
   private editMobileRoleFilter: string = 'all';
@@ -80,9 +98,13 @@ class AxieBattleGroundApp {
   }
 
   private async init() {
-    // Pre-load card database
-    await loadCardAbilitiesDatabase();
+    // Pre-load card database & Origins skill VFX database
+    await Promise.all([
+      loadCardAbilitiesDatabase(),
+      loadSkillVfxDatabase(),
+    ]);
 
+    this.setupAudioControllers();
     this.setupNavigation();
     this.setupEditTeamPage();
     this.setupTrainingGround();
@@ -122,18 +144,30 @@ class AxieBattleGroundApp {
     if (pageStudio) pageStudio.style.display = viewId === 'studio' ? 'flex' : 'none';
     if (pageEditTeam) pageEditTeam.style.display = viewId === 'edit-team' ? 'flex' : 'none';
     if (pageTrainingGround) pageTrainingGround.style.display = viewId === 'training-ground' ? 'flex' : 'none';
+
+    // BGM Context Transition
+    if (viewId === 'training-ground') {
+      audioManager.playBgm(this.isTacticalBattleRunning ? 'pve_1' : 'pvp');
+      setTimeout(() => this.resizeArenaVfxCanvas(), 100);
+    } else if (viewId === 'dashboard' || viewId === 'studio' || viewId === 'edit-team') {
+      audioManager.playBgm('home');
+    }
   }
 
   private setupNavigation() {
     // Landing Screen -> Start Game
     const btnStartGame = document.getElementById('btn-start-game');
     btnStartGame?.addEventListener('click', () => {
+      audioManager.playUiClick();
+      audioManager.playBgm('home');
       this.showPageView('dashboard');
     });
 
     // Landing Screen -> Mixer Studio
     const btnLandingMixer = document.getElementById('btn-landing-mixer');
     btnLandingMixer?.addEventListener('click', async () => {
+      audioManager.playUiClick();
+      audioManager.playBgm('home');
       this.showPageView('studio');
       await this.initStudioMode();
     });
@@ -141,6 +175,7 @@ class AxieBattleGroundApp {
     // Dashboard Header -> Mixer Studio
     const btnOpenMixerStudio = document.getElementById('btn-open-mixer-studio');
     btnOpenMixerStudio?.addEventListener('click', async () => {
+      audioManager.playUiClick();
       this.showPageView('studio');
       await this.initStudioMode();
     });
@@ -148,6 +183,7 @@ class AxieBattleGroundApp {
     // Studio Header -> Back to Game
     const btnBackToGame = document.getElementById('btn-back-to-game');
     btnBackToGame?.addEventListener('click', () => {
+      audioManager.playUiClick();
       this.showPageView('dashboard');
     });
 
@@ -684,7 +720,240 @@ class AxieBattleGroundApp {
       });
 
       await this.loadSampleAxie(0);
+      await this.setupStudioVfxLab();
     }
+  }
+
+  private setupAudioControllers() {
+    const bgmSelects = [
+      document.getElementById('select-global-bgm') as HTMLSelectElement,
+      document.getElementById('select-studio-bgm') as HTMLSelectElement,
+    ];
+    const playBtns = [
+      document.getElementById('btn-global-bgm-play'),
+      document.getElementById('btn-studio-bgm-play'),
+    ];
+    const muteBtns = [
+      document.getElementById('btn-global-bgm-mute'),
+      document.getElementById('btn-studio-bgm-mute'),
+    ];
+    const sliders = [
+      document.getElementById('slider-global-bgm') as HTMLInputElement,
+      document.getElementById('slider-studio-bgm') as HTMLInputElement,
+    ];
+
+    const updatePlayBtns = (isPlaying: boolean) => {
+      playBtns.forEach((btn) => {
+        if (btn) btn.textContent = isPlaying ? '⏸️' : '▶️';
+      });
+    };
+
+    const updateMuteBtns = (isMuted: boolean) => {
+      muteBtns.forEach((btn) => {
+        if (btn) btn.textContent = isMuted ? '🔇' : '🔊';
+      });
+    };
+
+    const updateTrackSelects = (track: MusicTrack | null) => {
+      if (!track) return;
+      bgmSelects.forEach((sel) => {
+        if (sel && sel.value !== track) sel.value = track;
+      });
+    };
+
+    audioManager.onTrackChange((track, isPlaying) => {
+      updatePlayBtns(isPlaying);
+      updateTrackSelects(track);
+      updateMuteBtns(audioManager.isBgmSilenced());
+    });
+
+    bgmSelects.forEach((sel) => {
+      sel?.addEventListener('change', () => {
+        const track = sel.value as MusicTrack;
+        audioManager.playBgm(track);
+      });
+    });
+
+    playBtns.forEach((btn) => {
+      btn?.addEventListener('click', () => {
+        const current = audioManager.getCurrentTrack();
+        if (current) {
+          audioManager.toggleBgmMute();
+        } else {
+          audioManager.playBgm('home');
+        }
+      });
+    });
+
+    muteBtns.forEach((btn) => {
+      btn?.addEventListener('click', () => {
+        const isMuted = audioManager.toggleBgmMute();
+        updateMuteBtns(isMuted);
+      });
+    });
+
+    sliders.forEach((sli) => {
+      if (sli) sli.value = audioManager.getBgmVolume().toString();
+      sli?.addEventListener('input', () => {
+        const vol = parseFloat(sli.value);
+        audioManager.setBgmVolume(vol);
+        sliders.forEach((s) => {
+          if (s && s !== sli) s.value = sli.value;
+        });
+      });
+    });
+  }
+
+  private async setupStudioVfxLab() {
+    this.studioVfxCanvas = document.getElementById('studio-vfx-canvas') as HTMLCanvasElement;
+    if (this.studioVfxCanvas) {
+      this.studioVfxCtx = this.studioVfxCanvas.getContext('2d') || undefined;
+      const resizeCanvas = () => {
+        if (this.studioVfxCanvas && this.studioVfxCanvas.parentElement) {
+          this.studioVfxCanvas.width = this.studioVfxCanvas.parentElement.clientWidth;
+          this.studioVfxCanvas.height = this.studioVfxCanvas.parentElement.clientHeight;
+        }
+      };
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+    }
+
+    try {
+      const catalog = await loadCatalog();
+      this.vfxCatalog = {
+        skills: catalog.items.filter((i) => i.kind === 'skill'),
+        buffs: catalog.items.filter((i) => i.kind === 'buff'),
+      };
+    } catch (e) {
+      console.warn('Failed to load VFX catalog for studio lab:', e);
+    }
+
+    const tabSkills = document.getElementById('tab-vfx-skills');
+    const tabBuffs = document.getElementById('tab-vfx-buffs');
+    const selectClip = document.getElementById('select-vfx-clip') as HTMLSelectElement;
+    const btnPlay = document.getElementById('btn-play-vfx');
+    const btnStop = document.getElementById('btn-stop-vfx');
+    const infoPill = document.getElementById('vfx-info-pill');
+
+    const updateVfxOptions = () => {
+      if (!selectClip) return;
+      selectClip.innerHTML = '';
+      const list = this.vfxLabMode === 'skill' ? this.vfxCatalog.skills : this.vfxCatalog.buffs;
+      list.forEach((item) => {
+        const opt = document.createElement('option');
+        opt.value = item.id;
+        const dur = (item.duration || 0).toFixed(2);
+        opt.textContent = `${item.id} (${dur}s)`;
+        selectClip.appendChild(opt);
+      });
+      updateClipInfo();
+    };
+
+    const updateClipInfo = async () => {
+      if (!selectClip || !infoPill) return;
+      const clipId = selectClip.value;
+      if (!clipId) return;
+      try {
+        const clip = await loadClip(clipId);
+        const eventsList = clip.events.map((e) => e.function).join(', ') || 'None';
+        infoPill.innerHTML = `<strong>${clip.id}</strong> • ${clip.frames} frames • ${clip.duration.toFixed(2)}s<br/><span style="opacity:0.8;">Events: ${eventsList}</span>`;
+      } catch {}
+    };
+
+    selectClip?.addEventListener('change', updateClipInfo);
+
+    tabSkills?.addEventListener('click', () => {
+      this.vfxLabMode = 'skill';
+      tabSkills.classList.add('active');
+      tabBuffs?.classList.remove('active');
+      updateVfxOptions();
+    });
+
+    tabBuffs?.addEventListener('click', () => {
+      this.vfxLabMode = 'buff';
+      tabBuffs.classList.add('active');
+      tabSkills?.classList.remove('active');
+      updateVfxOptions();
+    });
+
+    btnPlay?.addEventListener('click', async () => {
+      if (!selectClip || !this.studioVfxCanvas || !this.studioVfxCtx) return;
+      const clipId = selectClip.value;
+      if (!clipId) return;
+
+      if (this.activeStudioVfxHandle) {
+        this.activeStudioVfxHandle.stop();
+        this.activeStudioVfxHandle = null;
+      }
+
+      try {
+        const clip = await loadClip(clipId);
+        const atlas = await AdditiveAtlas.load(clip);
+        const w = this.studioVfxCanvas.width;
+        const h = this.studioVfxCanvas.height;
+        const axieAnchor = { x: w / 2, y: h * 0.65 };
+
+        // Trigger corresponding Spine mixer animation on current studio Axie
+        if (clip.attackAnimation) {
+          this.studioEngine?.setAnimation(clip.attackAnimation, false);
+        } else if (clip.kind === 'skill') {
+          this.studioEngine?.setAnimation(clip.isRanged ? 'attack/ranged/cast-fly' : 'attack/melee/horn-gore', false);
+        } else if (clip.kind === 'buff') {
+          this.studioEngine?.setAnimation('battle/get-buff', false);
+        }
+
+        this.activeStudioVfxHandle = playOnCanvas(
+          atlas,
+          this.studioVfxCtx,
+          () => ({
+            attacker: axieAnchor,
+            defender: { x: axieAnchor.x + 80, y: axieAnchor.y },
+            fieldWidth: w,
+          }),
+          {
+            loop: false,
+            playAudio: true,
+            onEvent: (evt) => {
+              if (evt.function === 'OnAttack' && clip.attackAnimation) {
+                this.studioEngine?.setAnimation(clip.attackAnimation, false);
+              } else if (evt.function === 'OnHit' && clip.hitAnimation) {
+                this.studioEngine?.setAnimation(clip.hitAnimation, false);
+              }
+            },
+            onDone: () => {
+              this.activeStudioVfxHandle = null;
+              this.studioEngine?.setAnimation('action/idle/normal', true);
+            },
+          }
+        );
+      } catch (err) {
+        console.error('Failed to play studio VFX:', err);
+      }
+    });
+
+    btnStop?.addEventListener('click', () => {
+      if (this.activeStudioVfxHandle) {
+        this.activeStudioVfxHandle.stop();
+        this.activeStudioVfxHandle = null;
+      }
+      this.studioEngine?.setAnimation('action/idle/normal', true);
+    });
+
+    // Test SFX Buttons
+    document.getElementById('btn-test-sfx-attack')?.addEventListener('click', () => {
+      const clipId = selectClip?.value || 'aquatic_slash';
+      audioManager.playSkillSfx(clipId, 'attack');
+    });
+    document.getElementById('btn-test-sfx-fly')?.addEventListener('click', () => {
+      const clipId = selectClip?.value || 'bird_projectile';
+      audioManager.playSkillSfx(clipId, 'fly');
+    });
+    document.getElementById('btn-test-sfx-hit')?.addEventListener('click', () => {
+      const clipId = selectClip?.value || 'beast_gore';
+      audioManager.playSkillSfx(clipId, 'hit');
+    });
+
+    updateVfxOptions();
   }
 
   private setupStudioEventListeners() {
@@ -1843,18 +2112,28 @@ class AxieBattleGroundApp {
      TAB 5: GAME SETTINGS & PREFERENCES
      ========================================================================== */
   private setupSettingsTab() {
-    // Sliders live readout
-    const bindSlider = (sliderId: string, badgeId: string) => {
+    // Sliders live readout & Audio Manager binding
+    const bindSlider = (sliderId: string, badgeId: string, onUpdate?: (val: number) => void) => {
       const slider = document.getElementById(sliderId) as HTMLInputElement;
       const badge = document.getElementById(badgeId);
       slider?.addEventListener('input', () => {
+        const num = parseInt(slider.value, 10);
         if (badge) badge.textContent = `${slider.value}%`;
+        onUpdate?.(num);
       });
     };
 
-    bindSlider('slider-audio-master', 'val-audio-master');
-    bindSlider('slider-audio-bgm', 'val-audio-bgm');
-    bindSlider('slider-audio-sfx', 'val-audio-sfx');
+    bindSlider('slider-audio-master', 'val-audio-master', (val) => {
+      audioManager.setBgmVolume((val / 100) * 0.4);
+      audioManager.setSfxVolume(val / 100);
+    });
+    bindSlider('slider-audio-bgm', 'val-audio-bgm', (val) => {
+      audioManager.setBgmVolume(val / 100);
+    });
+    bindSlider('slider-audio-sfx', 'val-audio-sfx', (val) => {
+      audioManager.setSfxVolume(val / 100);
+      audioManager.playSkillSfx('aquatic_slash', 'attack');
+    });
 
     // Resolution pill selector
     const resPills = document.querySelectorAll('#group-resolution .setting-pill');
@@ -2017,6 +2296,7 @@ class AxieBattleGroundApp {
     const btnExit = document.getElementById('btn-exit-training-ground');
     btnExit?.addEventListener('click', () => {
       this.isTacticalBattleRunning = false;
+      audioManager.playUiClick();
       this.showPageView('dashboard');
       const tabBattle = document.getElementById('tab-btn-battle');
       tabBattle?.click();
@@ -2024,6 +2304,7 @@ class AxieBattleGroundApp {
 
     const btnStart = document.getElementById('btn-start-tactical-battle');
     btnStart?.addEventListener('click', () => {
+      audioManager.playUiClick();
       if (this.isTacticalBattleRunning) {
         this.isTacticalBattleRunning = false;
         if (btnStart) {
@@ -2037,17 +2318,35 @@ class AxieBattleGroundApp {
 
     const btnReset = document.getElementById('btn-reset-tactical-battle');
     btnReset?.addEventListener('click', () => {
+      audioManager.playUiClick();
       this.resetTacticalBattle();
     });
 
+    const aspectBox = document.querySelector('.arena-board-aspect-box');
+    this.arenaVfxCanvas = document.getElementById('arena-vfx-canvas') as HTMLCanvasElement;
+    if (this.arenaVfxCanvas && aspectBox) {
+      this.arenaVfxCtx = this.arenaVfxCanvas.getContext('2d') || undefined;
+      this.resizeArenaVfxCanvas();
+      window.addEventListener('resize', () => this.resizeArenaVfxCanvas());
+    }
+
     this.renderTacticalBattleGrid();
     this.renderBoardSpineAxies();
+  }
+
+  private resizeArenaVfxCanvas() {
+    const aspectBox = document.querySelector('.arena-board-aspect-box');
+    if (this.arenaVfxCanvas && aspectBox) {
+      this.arenaVfxCanvas.width = aspectBox.clientWidth;
+      this.arenaVfxCanvas.height = aspectBox.clientHeight;
+    }
   }
 
   public openTrainingGround() {
     this.showPageView('training-ground');
     this.renderTacticalBattleGrid();
     this.renderBoardSpineAxies();
+    this.resizeArenaVfxCanvas();
   }
 
   private getGridCellCenter(row: number, col: number): { cx: number; cy: number; leftPct: number; topPct: number } {
@@ -2540,9 +2839,29 @@ class AxieBattleGroundApp {
     const armorGain = Math.round((card.defaultDefense || 50) * 16);
     unit.currentShield += armorGain;
 
-    unit.spineEngine?.setAnimation('defense/hit-by-normal', false);
+    unit.spineEngine?.setAnimation('battle/get-buff', false);
     this.showFloatingShield(unit, armorGain);
     this.updateUnitHud(unit);
+
+    // Play Origins Shield SFX & Additive Shield VFX
+    audioManager.playBuffSfx('shield');
+    if (this.arenaVfxCanvas && this.arenaVfxCtx) {
+      try {
+        const center = this.getGridCellCenter(unit.row, unit.col);
+        const w = this.arenaVfxCanvas.width;
+        const h = this.arenaVfxCanvas.height;
+        const posX = (center.leftPct / 100) * w;
+        const posY = (center.topPct / 100) * h;
+        const clip = await loadClip('shield');
+        const atlas = await AdditiveAtlas.load(clip);
+        playOnCanvas(
+          atlas,
+          this.arenaVfxCtx,
+          () => ({ attacker: { x: posX, y: posY }, defender: { x: posX, y: posY }, fieldWidth: w }),
+          { loop: false, playAudio: false }
+        );
+      } catch {}
+    }
 
     const readout = document.getElementById('arena-hover-cell-readout');
     if (readout) {
@@ -2572,15 +2891,68 @@ class AxieBattleGroundApp {
     const isRanged = card.expectType === 'ranged';
     const isRed = attacker.team === 'red';
 
-    if (isRanged) {
+    // Official Origins Card-to-VFX mapping
+    const vfxMapping = getVfxForAbility(card.id);
+    const vfxId = vfxMapping
+      ? vfxMapping.vfxId
+      : (isRanged ? `${attacker.class.toLowerCase()}_projectile` : `${attacker.class.toLowerCase()}_slash`);
+
+    if (vfxMapping && vfxMapping.attackAnimation) {
+      attacker.spineEngine?.setAnimation(vfxMapping.attackAnimation, false);
+    } else if (isRanged) {
       attacker.spineEngine?.setAnimation('attack/ranged/cast-fly', false);
-      this.spawnRangedProjectile(attacker, target);
     } else {
+      attacker.spineEngine?.setAnimation('attack/melee/horn-gore', false);
+    }
+
+    if (!isRanged) {
       attacker.domElement?.classList.add(isRed ? 'is-lunge-right' : 'is-lunge-left');
-      attacker.spineEngine?.setAnimation('attack/melee/mouth-bite', false);
       setTimeout(() => {
         attacker.domElement?.classList.remove('is-lunge-right', 'is-lunge-left');
       }, 300);
+    } else {
+      this.spawnRangedProjectile(attacker, target);
+    }
+
+    // Play Origins Attack SFX
+    audioManager.playSkillSfx(vfxId, 'attack');
+
+    // Trigger Origins Additive VFX on battlefield overlay
+    if (this.arenaVfxCanvas && this.arenaVfxCtx) {
+      try {
+        const start = this.getGridCellCenter(attacker.row, attacker.col);
+        const end = this.getGridCellCenter(target.row, target.col);
+        const w = this.arenaVfxCanvas.width;
+        const h = this.arenaVfxCanvas.height;
+        const atkPos = { x: (start.leftPct / 100) * w, y: (start.topPct / 100) * h };
+        const defPos = { x: (end.leftPct / 100) * w, y: (end.topPct / 100) * h };
+
+        const clip = await loadClip(vfxId);
+        const atlas = await AdditiveAtlas.load(clip);
+        playOnCanvas(
+          atlas,
+          this.arenaVfxCtx,
+          () => ({ attacker: atkPos, defender: defPos, fieldWidth: w }),
+          {
+            loop: false,
+            playAudio: false,
+            onEvent: (evt) => {
+              if (evt.function === 'OnThrow') {
+                audioManager.playSkillSfx(vfxId, 'fly');
+              } else if (evt.function === 'OnHit') {
+                audioManager.playSkillSfx(vfxId, 'hit');
+                if (vfxMapping && vfxMapping.hitAnimation) {
+                  target.spineEngine?.setAnimation(vfxMapping.hitAnimation, false);
+                }
+              }
+            },
+          }
+        );
+      } catch (e) {
+        setTimeout(() => audioManager.playSkillSfx(vfxId, 'hit'), 320);
+      }
+    } else {
+      setTimeout(() => audioManager.playSkillSfx(vfxId, 'hit'), 320);
     }
 
     await this.sleep(340);
@@ -2610,7 +2982,9 @@ class AxieBattleGroundApp {
     }
 
     target.currentHp = Math.max(0, target.currentHp - remainingDamage);
-    target.spineEngine?.setAnimation('defense/hit-by-normal', false);
+    if (!vfxMapping || !vfxMapping.hitAnimation) {
+      target.spineEngine?.setAnimation('defense/hit-by-normal', false);
+    }
     target.domElement?.classList.add('is-hit');
     setTimeout(() => target.domElement?.classList.remove('is-hit'), 350);
 
@@ -2812,6 +3186,9 @@ class AxieBattleGroundApp {
       startBtn.classList.add('is-fighting');
     }
 
+    // Play Origins Tactical Battle Theme
+    audioManager.playBgm('pve_1');
+
     const readout = document.getElementById('arena-hover-cell-readout');
     const roundBadge = document.getElementById('battle-round-badge');
     if (roundBadge) roundBadge.textContent = 'REAL-TIME AUTO BATTLE';
@@ -2842,6 +3219,7 @@ class AxieBattleGroundApp {
           startBtn.classList.remove('is-fighting');
         }
         this.isTacticalBattleRunning = false;
+        audioManager.playSfx('power_awaken');
         break;
       }
 
@@ -2862,6 +3240,7 @@ class AxieBattleGroundApp {
   private resetTacticalBattle() {
     this.isTacticalBattleRunning = false;
     this.currentTacticalRound = 1;
+    audioManager.playBgm('pvp');
 
     const startBtn = document.getElementById('btn-start-tactical-battle');
     if (startBtn) {

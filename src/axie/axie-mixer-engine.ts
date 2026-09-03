@@ -318,6 +318,14 @@ export class AxieMixerEngine {
     return this.currentAnimation;
   }
 
+  public getPixiApp(): Application {
+    return this.app;
+  }
+
+  public getSpine(): Spine | undefined {
+    return this.currentAxieSpine;
+  }
+
   public exportCanvasSnapshot(): string {
     const extract = this.app.renderer.extract as any;
     if (typeof extract.canvas === 'function') {
