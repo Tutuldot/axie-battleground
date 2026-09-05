@@ -24,10 +24,33 @@ export function mapCaptureToField(clip: VfxClip, anchors: Anchors) {
   const cdx = clip.captureDefender.x - clip.captureAttacker.x;
   const jdx = defender.x - attacker.x;
   const captureSpan = Math.abs(cdx) > 8 ? Math.abs(cdx) : 390;
-  const spanScale = Math.abs(jdx) > 8 ? Math.abs(jdx) / captureSpan : 0.6;
-  const fitScale = fieldWidth > 0 ? (fieldWidth * 0.55) / clip.atlas.frameW : spanScale;
-  const scale = Math.min(Math.max(0.22, spanScale), Math.max(0.22, fitScale));
-  const flip = Math.sign(jdx || 1) !== Math.sign(cdx || -1);
+
+  // Responsive field width factor normalized to standard 1024px arena width
+  const fieldFactor = fieldWidth > 0 ? Math.max(0.75, Math.min(1.25, fieldWidth / 1024)) : 1.0;
+
+  let scale: number;
+  let flip: boolean;
+
+  if (clip.kind === 'buff') {
+    // Buff / Attached effects (e.g. Shield, Bubble, Buff Aura):
+    // Positioned directly on the unit. Sized generously (~0.84) to wrap around the 140px Axie body.
+    scale = 0.84 * fieldFactor;
+    flip = false; // Standard upright orientation for buffs
+  } else if (clip.isRanged) {
+    // Ranged Projectile / Cast / Throw effects:
+    // Scale dynamically with flight distance across grid columns, with a minimum floor (0.68)
+    // so close-range shots are never microscopic dots.
+    const spanScale = Math.abs(jdx) > 8 ? Math.abs(jdx) / captureSpan : 0.75;
+    scale = Math.max(0.68, Math.min(1.25, spanScale)) * fieldFactor;
+    flip = Math.sign(jdx || 1) !== Math.sign(cdx || -1);
+  } else {
+    // Melee attack skills (e.g. Slashes, Bites, Gores, Smashes):
+    // Hit effect plays directly ON the defender Axie. Decoupled from inter-cell distance
+    // so adjacent melee strikes remain large, punchy, and prominent (~0.82 scale).
+    scale = 0.82 * fieldFactor;
+    flip = Math.sign(jdx || 1) !== Math.sign(cdx || -1);
+  }
+
   return { scale, flip, defender, attacker };
 }
 
@@ -87,6 +110,7 @@ export class AdditiveAtlas {
     const col = index % cols;
     const row = Math.floor(index / cols);
     ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
     ctx.translate(x, y);
     ctx.scale(scaleX, scaleY);
     ctx.drawImage(
@@ -104,6 +128,159 @@ export class AdditiveAtlas {
   }
 }
 
+interface ActiveCanvasEffect {
+  atlas: AdditiveAtlas;
+  getAnchors: () => Anchors;
+  opts: {
+    loop?: boolean;
+    onEvent?: (evt: ClipEvent & { time: number }) => void;
+    onFrame?: (index: number, time: number) => void;
+    onDone?: () => void;
+    playAudio?: boolean;
+  };
+  started: number;
+  fired: Set<string>;
+  cycle: number;
+  stopped: boolean;
+}
+
+class CanvasVfxManager {
+  private activeEffects: ActiveCanvasEffect[] = [];
+  private rafId: number | null = null;
+  private ctx: CanvasRenderingContext2D;
+
+  constructor(ctx: CanvasRenderingContext2D) {
+    this.ctx = ctx;
+  }
+
+  add(effect: ActiveCanvasEffect): PlayHandle {
+    this.activeEffects.push(effect);
+    if (this.rafId === null) {
+      this.startLoop();
+    }
+    return {
+      stop: () => {
+        effect.stopped = true;
+        const idx = this.activeEffects.indexOf(effect);
+        if (idx !== -1) {
+          this.activeEffects.splice(idx, 1);
+        }
+        if (this.activeEffects.length === 0) {
+          this.stopLoop();
+          this.clearCanvas();
+        }
+      },
+    };
+  }
+
+  private clearCanvas() {
+    this.ctx.save();
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+    this.ctx.restore();
+  }
+
+  private startLoop() {
+    const tick = () => {
+      if (this.activeEffects.length === 0) {
+        this.stopLoop();
+        this.clearCanvas();
+        return;
+      }
+
+      this.clearCanvas();
+
+      const now = performance.now();
+      const remaining: ActiveCanvasEffect[] = [];
+
+      for (const effect of this.activeEffects) {
+        if (effect.stopped) continue;
+
+        const clip = effect.atlas.clip;
+        const origin = clip.anchor;
+        const elapsed = (now - effect.started) / 1000;
+        const nextCycle = effect.opts.loop ? Math.floor(elapsed / Math.max(0.05, clip.duration)) : 0;
+        if (nextCycle !== effect.cycle) {
+          effect.fired.clear();
+          effect.cycle = nextCycle;
+        }
+
+        const t = effect.opts.loop ? elapsed % clip.duration : Math.min(clip.duration, elapsed);
+        const index = frameAt(clip, t);
+
+        const map = mapCaptureToField(clip, effect.getAnchors());
+        const pos = cropPointToField(clip, map, origin.x, origin.y);
+
+        effect.atlas.drawCanvas(
+          this.ctx,
+          index,
+          pos.x,
+          pos.y,
+          map.flip ? -map.scale : map.scale,
+          map.scale,
+          origin.x,
+          origin.y
+        );
+
+        effect.opts.onFrame?.(index, t);
+
+        for (const evt of clip.events) {
+          const key = `${evt.function}:${evt.time}`;
+          if (t + 1 / clip.fps >= evt.time && !effect.fired.has(key)) {
+            effect.fired.add(key);
+            effect.opts.onEvent?.({ ...evt, time: evt.time });
+
+            if (effect.opts.playAudio !== false) {
+              if (evt.function === 'OnAttack') {
+                audioManager.playSkillSfx(clip.id, 'attack');
+              } else if (evt.function === 'OnThrow') {
+                audioManager.playSkillSfx(clip.id, 'fly');
+              } else if (evt.function === 'OnHit') {
+                audioManager.playSkillSfx(clip.id, 'hit');
+              }
+            }
+          }
+        }
+
+        if (!effect.opts.loop && elapsed >= clip.duration) {
+          effect.opts.onDone?.();
+        } else {
+          remaining.push(effect);
+        }
+      }
+
+      this.activeEffects = remaining;
+
+      if (this.activeEffects.length > 0) {
+        this.rafId = requestAnimationFrame(tick);
+      } else {
+        this.stopLoop();
+        this.clearCanvas();
+      }
+    };
+
+    this.rafId = requestAnimationFrame(tick);
+  }
+
+  private stopLoop() {
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+  }
+}
+
+const canvasManagers = new WeakMap<CanvasRenderingContext2D, CanvasVfxManager>();
+
+function getCanvasManager(ctx: CanvasRenderingContext2D): CanvasVfxManager {
+  let mgr = canvasManagers.get(ctx);
+  if (!mgr) {
+    mgr = new CanvasVfxManager(ctx);
+    canvasManagers.set(ctx, mgr);
+  }
+  return mgr;
+}
+
 export function playOnCanvas(
   atlas: AdditiveAtlas,
   ctx: CanvasRenderingContext2D,
@@ -117,85 +294,22 @@ export function playOnCanvas(
   } = {}
 ): PlayHandle {
   const clip = atlas.clip;
-  const origin = clip.anchor;
-  let raf = 0;
-  let stopped = false;
-  const started = performance.now();
-  const fired = new Set<string>();
-  let cycle = 0;
-
-  if (opts.playAudio !== false) {
-    if (clip.kind === 'buff') {
-      audioManager.playBuffSfx(clip.id);
-    }
+  if (opts.playAudio !== false && clip.kind === 'buff') {
+    audioManager.playBuffSfx(clip.id);
   }
 
-  const tick = () => {
-    if (stopped) return;
-    const elapsed = (performance.now() - started) / 1000;
-    const nextCycle = opts.loop ? Math.floor(elapsed / Math.max(0.05, clip.duration)) : 0;
-    if (nextCycle !== cycle) {
-      fired.clear();
-      cycle = nextCycle;
-    }
-    const t = opts.loop ? elapsed % clip.duration : Math.min(clip.duration, elapsed);
-    const index = frameAt(clip, t);
-
-    // Save and clear overlay canvas
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    ctx.restore();
-
-    const map = mapCaptureToField(clip, getAnchors());
-    const pos = cropPointToField(clip, map, origin.x, origin.y);
-    atlas.drawCanvas(ctx, index, pos.x, pos.y, map.flip ? -map.scale : map.scale, map.scale, origin.x, origin.y);
-
-    opts.onFrame?.(index, t);
-
-    for (const evt of clip.events) {
-      const key = `${evt.function}:${evt.time}`;
-      if (t + 1 / clip.fps >= evt.time && !fired.has(key)) {
-        fired.add(key);
-        opts.onEvent?.({ ...evt, time: evt.time });
-
-        if (opts.playAudio !== false) {
-          if (evt.function === 'OnAttack') {
-            audioManager.playSkillSfx(clip.id, 'attack');
-          } else if (evt.function === 'OnThrow') {
-            audioManager.playSkillSfx(clip.id, 'fly');
-          } else if (evt.function === 'OnHit') {
-            audioManager.playSkillSfx(clip.id, 'hit');
-          }
-        }
-      }
-    }
-
-    if (!opts.loop && elapsed >= clip.duration) {
-      opts.onDone?.();
-      // Clear final frame
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      ctx.restore();
-      return;
-    }
-
-    raf = requestAnimationFrame(tick);
+  const effect: ActiveCanvasEffect = {
+    atlas,
+    getAnchors,
+    opts,
+    started: performance.now(),
+    fired: new Set<string>(),
+    cycle: 0,
+    stopped: false,
   };
 
-  tick();
-
-  return {
-    stop() {
-      stopped = true;
-      cancelAnimationFrame(raf);
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      ctx.restore();
-    },
-  };
+  const mgr = getCanvasManager(ctx);
+  return mgr.add(effect);
 }
 
 export function playOnPixi(

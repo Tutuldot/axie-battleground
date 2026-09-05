@@ -2697,6 +2697,21 @@ class AxieBattleGroundApp {
     return { cx, cy, leftPct, topPct };
   }
 
+  /**
+   * Gets the visual center (torso/chest) of an Axie unit on the battlefield,
+   * elevated ~42px (7.2% of canvas height) above the ground perspective center
+   * so that skill and attached VFX anchor directly over the Axie's body rather than the floor.
+   */
+  private getAxieVisualCenter(row: number, col: number): { cx: number; cy: number; leftPct: number; topPct: number } {
+    const ground = this.getGridCellCenter(row, col);
+    return {
+      cx: ground.cx,
+      cy: ground.cy - 42,
+      leftPct: ground.leftPct,
+      topPct: Math.max(2, ground.topPct - 7.2),
+    };
+  }
+
   private renderTacticalBattleGrid() {
     const cellsGroup = document.getElementById('arena-cells-group');
     const readout = document.getElementById('arena-hover-cell-readout');
@@ -3243,7 +3258,7 @@ class AxieBattleGroundApp {
     audioManager.playBuffSfx('shield');
     if (this.arenaVfxCanvas && this.arenaVfxCtx) {
       try {
-        const center = this.getGridCellCenter(unit.row, unit.col);
+        const center = this.getAxieVisualCenter(unit.row, unit.col);
         const w = this.arenaVfxCanvas.width;
         const h = this.arenaVfxCanvas.height;
         const posX = (center.leftPct / 100) * w;
@@ -3316,8 +3331,8 @@ class AxieBattleGroundApp {
     // Trigger Origins Additive VFX on battlefield overlay
     if (this.arenaVfxCanvas && this.arenaVfxCtx) {
       try {
-        const start = this.getGridCellCenter(attacker.row, attacker.col);
-        const end = this.getGridCellCenter(target.row, target.col);
+        const start = this.getAxieVisualCenter(attacker.row, attacker.col);
+        const end = this.getAxieVisualCenter(target.row, target.col);
         const w = this.arenaVfxCanvas.width;
         const h = this.arenaVfxCanvas.height;
         const atkPos = { x: (start.leftPct / 100) * w, y: (start.topPct / 100) * h };
@@ -3548,19 +3563,19 @@ class AxieBattleGroundApp {
     const aspectBox = document.querySelector('.arena-board-aspect-box');
     if (!aspectBox) return;
 
-    const start = this.getGridCellCenter(attacker.row, attacker.col);
-    const end = this.getGridCellCenter(target.row, target.col);
+    const start = this.getAxieVisualCenter(attacker.row, attacker.col);
+    const end = this.getAxieVisualCenter(target.row, target.col);
 
     const proj = document.createElement('div');
     proj.className = `ranged-projectile ${attacker.team === 'red' ? 'red-proj' : 'blue-proj'}`;
     proj.style.left = `${start.leftPct}%`;
-    proj.style.top = `${start.topPct - 4}%`;
+    proj.style.top = `${start.topPct}%`;
 
     aspectBox.appendChild(proj);
 
     requestAnimationFrame(() => {
       proj.style.left = `${end.leftPct}%`;
-      proj.style.top = `${end.topPct - 4}%`;
+      proj.style.top = `${end.topPct}%`;
     });
 
     setTimeout(() => {
