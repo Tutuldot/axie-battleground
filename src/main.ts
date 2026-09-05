@@ -2494,7 +2494,7 @@ class AxieBattleGroundApp {
 
     const readout = document.getElementById('arena-hover-cell-readout');
     if (readout) {
-      readout.textContent = `🎯 Selected #${unit.id} (${unit.class}). Click any cell in Cols 1–2 to move, or another Red Axie to swap.`;
+      readout.textContent = `🎯 Axie #${unit.id} (${unit.class}) ready to move — Tap any cell in Columns 1–2, or tap this Axie again to cancel.`;
     }
     audioManager.playUiClick();
   }
@@ -2512,11 +2512,21 @@ class AxieBattleGroundApp {
   private moveAxieToCell(unit: TacticalAxieUnit, targetRow: number, targetCol: number) {
     if (targetCol >= 2) {
       const readout = document.getElementById('arena-hover-cell-readout');
-      if (readout) readout.textContent = '⚠️ Placement is restricted to the first 2 columns (Cols 1–2)!';
+      if (readout) readout.textContent = '⚠️ Placement restricted: Red Axies can only be placed in Columns 1 & 2!';
+      audioManager.playUiTab();
       return;
     }
 
-    // Check if another Red Axie already occupies target cell
+    // If tapped the same cell the Axie is already occupying, cancel movement
+    if (targetRow === unit.row && targetCol === unit.col) {
+      this.clearPlacementSelection();
+      const readout = document.getElementById('arena-hover-cell-readout');
+      if (readout) readout.textContent = 'Movement cancelled. Tap a Red Axie to move.';
+      audioManager.playUiClick();
+      return;
+    }
+
+    // Check if another Red Axie already occupies target cell -> Swap them!
     const occupyingUnit = this.tacticalUnits.find(
       (u) => u.team === 'red' && u.id !== unit.id && u.row === targetRow && u.col === targetCol
     );
@@ -2548,7 +2558,7 @@ class AxieBattleGroundApp {
     audioManager.playUiEquip();
     const readout = document.getElementById('arena-hover-cell-readout');
     if (readout) {
-      readout.textContent = `✅ Moved Axie #${unit.id} to [R${targetRow + 1}-C${targetCol + 1}]`;
+      readout.textContent = `✅ Moved Axie #${unit.id} to [Row ${targetRow + 1}, Col ${targetCol + 1}]`;
     }
     this.clearPlacementSelection();
   }
@@ -2598,80 +2608,6 @@ class AxieBattleGroundApp {
       readout.textContent = `🔄 Swapped Axie #${unitA.id} and Axie #${unitB.id}`;
     }
     this.clearPlacementSelection();
-  }
-
-  private setupAxieDragAndDrop(unit: TacticalAxieUnit, unitEl: HTMLElement) {
-    let startX = 0;
-    let startY = 0;
-    let isDragging = false;
-    let hasMoved = false;
-
-    const onPointerDown = (e: PointerEvent) => {
-      if (!this.isPreparationPhase || unit.team !== 'red' || e.button !== 0) return;
-      startX = e.clientX;
-      startY = e.clientY;
-      isDragging = true;
-      hasMoved = false;
-
-      this.selectAxieForPlacement(unit);
-
-      const onPointerMove = (moveEvt: PointerEvent) => {
-        if (!isDragging) return;
-        const dx = moveEvt.clientX - startX;
-        const dy = moveEvt.clientY - startY;
-
-        if (Math.hypot(dx, dy) > 8) {
-          hasMoved = true;
-          unitEl.classList.add('prep-dragging');
-
-          const elem = document.elementFromPoint(moveEvt.clientX, moveEvt.clientY);
-          const cellPolygon = elem?.closest('.arena-cell-polygon') as SVGPolygonElement | null;
-
-          document.querySelectorAll('.arena-cell-polygon').forEach((p) => p.classList.remove('cell-placement-hover'));
-          if (cellPolygon) {
-            const col = parseInt(cellPolygon.getAttribute('data-col') || '0', 10);
-            if (col === 1 || col === 2) {
-              cellPolygon.classList.add('cell-placement-hover');
-            }
-          }
-        }
-      };
-
-      const onPointerUp = (upEvt: PointerEvent) => {
-        window.removeEventListener('pointermove', onPointerMove);
-        window.removeEventListener('pointerup', onPointerUp);
-
-        if (!isDragging) return;
-        isDragging = false;
-        unitEl.classList.remove('prep-dragging');
-        document.querySelectorAll('.arena-cell-polygon').forEach((p) => p.classList.remove('cell-placement-hover'));
-
-        if (hasMoved) {
-          const elem = document.elementFromPoint(upEvt.clientX, upEvt.clientY);
-          const cellPolygon = elem?.closest('.arena-cell-polygon') as SVGPolygonElement | null;
-          if (cellPolygon) {
-            const row = parseInt(cellPolygon.getAttribute('data-row') || '0', 10) - 1;
-            const col = parseInt(cellPolygon.getAttribute('data-col') || '0', 10) - 1;
-            if (col < 2) {
-              this.moveAxieToCell(unit, row, col);
-              return;
-            } else {
-              const readout = document.getElementById('arena-hover-cell-readout');
-              if (readout) readout.textContent = '⚠️ Placement restricted to Columns 1–2!';
-            }
-          }
-          // Snap back if dropped invalidly
-          const origPos = this.getGridCellCenter(unit.row, unit.col);
-          unitEl.style.left = `${origPos.leftPct.toFixed(2)}%`;
-          unitEl.style.top = `${origPos.topPct.toFixed(2)}%`;
-        }
-      };
-
-      window.addEventListener('pointermove', onPointerMove);
-      window.addEventListener('pointerup', onPointerUp);
-    };
-
-    unitEl.addEventListener('pointerdown', onPointerDown);
   }
 
   private getGridCellCenter(row: number, col: number): { cx: number; cy: number; leftPct: number; topPct: number } {
@@ -2775,12 +2711,12 @@ class AxieBattleGroundApp {
             if (this.isPreparationPhase && this.selectedRedAxieIdForPositioning) {
               if (c < 2) {
                 polygon.classList.add('cell-placement-hover');
-                readout.textContent = `🎯 Move selected Axie #${this.selectedRedAxieIdForPositioning} to [${cellId}] (Col ${c + 1})`;
+                readout.textContent = `🎯 Tap to move Axie #${this.selectedRedAxieIdForPositioning} to [Row ${r + 1}, Col ${c + 1}]`;
               } else {
-                readout.textContent = `🚫 Cannot place at [${cellId}] (Red placement restricted to Columns 1 & 2)`;
+                readout.textContent = `🚫 Restricted: Red Axies can only be placed in Columns 1 & 2`;
               }
             } else if (this.isPreparationPhase) {
-              readout.textContent = `${zoneEmoji} ${zoneName}: [${cellId}] (Drag or click Red Axies to place in Cols 1–2)`;
+              readout.textContent = `${zoneEmoji} ${zoneName}: [${cellId}] (Tap a Red Axie to select and move)`;
             } else {
               readout.textContent = `${zoneEmoji} ${zoneName}: [${cellId}]`;
             }
@@ -2791,9 +2727,9 @@ class AxieBattleGroundApp {
           polygon.classList.remove('cell-placement-hover');
           if (readout && !this.isTacticalBattleRunning) {
             if (this.isPreparationPhase && this.selectedRedAxieIdForPositioning) {
-              readout.textContent = `🎯 Axie #${this.selectedRedAxieIdForPositioning} selected — Click any cell in Cols 1–2 to place`;
+              readout.textContent = `🎯 Axie #${this.selectedRedAxieIdForPositioning} ready to move — Tap any cell in Columns 1–2, or tap the Axie again to cancel`;
             } else if (this.isPreparationPhase) {
-              readout.textContent = '🛡️ Prep Phase: Drag or click Red Axies to reposition within Cols 1–2';
+              readout.textContent = '🛡️ Prep Phase: Tap an Axie to select, then tap a cell in Columns 1–2 to reposition';
             } else if (this.selectedCellId) {
               const selectedEl = document.querySelector(`[data-cell-id="${this.selectedCellId}"]`);
               const selZone = selectedEl?.getAttribute('data-zone');
@@ -2829,15 +2765,28 @@ class AxieBattleGroundApp {
             }
           }
 
+          if (this.isPreparationPhase && !this.selectedRedAxieIdForPositioning) {
+            if (c < 2) {
+              const readout = document.getElementById('arena-hover-cell-readout');
+              if (readout) {
+                readout.textContent = '💡 Tap one of your Red Axies first to select it, then tap this cell to place it here.';
+              }
+              audioManager.playUiClick();
+              return;
+            }
+          }
+
           document.querySelectorAll('.arena-cell-polygon').forEach((el) => el.classList.remove('is-selected'));
           if (this.selectedCellId === cellId) {
             this.selectedCellId = null;
-            if (readout) readout.textContent = this.isPreparationPhase ? 'Place Red Axies in Cols 1–2' : 'Real-time combat arena';
+            if (readout) readout.textContent = this.isPreparationPhase ? 'Tap Red Axie to select, then tap cell in Cols 1–2' : 'Real-time combat arena';
           } else {
             this.selectedCellId = cellId;
             polygon.classList.add('is-selected');
             if (readout) {
-              readout.textContent = `Selected: ${zoneEmoji} [${cellId}] (${zoneName})`;
+              const occupants = this.tacticalUnits.filter((u) => u.row === r && u.col === c && !u.isDefeated);
+              const occStr = occupants.length > 0 ? ` | Unit: #${occupants[0].id} (${occupants[0].class})` : ' | Empty';
+              readout.textContent = `Selected: ${zoneEmoji} ${zoneName} [${cellId}]${occStr}`;
             }
           }
         });
@@ -2964,28 +2913,41 @@ class AxieBattleGroundApp {
         if (this.isTacticalBattleRunning) return;
 
         // Interactive Placement Phase handling for Red units
-        if (this.isPreparationPhase && isRed) {
+        if (this.isPreparationPhase) {
           const currentUnit = this.tacticalUnits.find((u) => u.id === axie.id);
           if (currentUnit) {
-            if (this.selectedRedAxieIdForPositioning) {
-              if (this.selectedRedAxieIdForPositioning === currentUnit.id) {
-                // Clicked same Axie -> deselect
-                this.clearPlacementSelection();
-                return;
-              } else {
-                // Clicked another Red Axie -> Swap positions!
-                const prevUnit = this.tacticalUnits.find(
-                  (u) => u.id === this.selectedRedAxieIdForPositioning
-                );
-                if (prevUnit) {
-                  this.swapAxiePositions(prevUnit, currentUnit);
+            if (isRed) {
+              if (this.selectedRedAxieIdForPositioning) {
+                if (this.selectedRedAxieIdForPositioning === currentUnit.id) {
+                  // Clicked same Axie -> deselect / cancel movement
+                  this.clearPlacementSelection();
+                  const readout = document.getElementById('arena-hover-cell-readout');
+                  if (readout) readout.textContent = 'Movement cancelled. Tap a Red Axie to move.';
+                  audioManager.playUiClick();
                   return;
+                } else {
+                  // Clicked another Red Axie -> Swap positions!
+                  const prevUnit = this.tacticalUnits.find(
+                    (u) => u.id === this.selectedRedAxieIdForPositioning
+                  );
+                  if (prevUnit) {
+                    this.swapAxiePositions(prevUnit, currentUnit);
+                    return;
+                  }
                 }
+              } else {
+                // Select this Red Axie for positioning
+                this.selectAxieForPlacement(currentUnit);
+                return;
               }
             } else {
-              // Select this Red Axie for positioning
-              this.selectAxieForPlacement(currentUnit);
-              return;
+              // Clicked an enemy Blue Axie during prep phase
+              if (this.selectedRedAxieIdForPositioning) {
+                const readout = document.getElementById('arena-hover-cell-readout');
+                if (readout) readout.textContent = '⚠️ Enemy Blue units cannot be moved. Tap an open cell in Columns 1–2.';
+                audioManager.playUiTab();
+                return;
+              }
             }
           }
         }
@@ -3049,11 +3011,6 @@ class AxieBattleGroundApp {
         isDefeated: false,
       };
       this.tacticalUnits.push(newUnit);
-
-      // Connect drag-and-drop repositioning for Red squad
-      if (isRed) {
-        this.setupAxieDragAndDrop(newUnit, unitEl);
-      }
     });
   }
 
