@@ -3414,6 +3414,224 @@ input:checked + .slider-toggle:before {
   letter-spacing: 0.05em;
 }
 
+/* Preparation Countdown Badge */
+.battle-countdown-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-heading);
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  padding: 0.35rem 0.8rem;
+  border-radius: 8px;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
+  animation: countdownBadgePulse 2s ease-in-out infinite alternate;
+}
+
+.battle-countdown-badge.is-fighting {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.15);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.25);
+}
+
+@keyframes countdownBadgePulse {
+  0% { box-shadow: 0 0 8px rgba(245, 158, 11, 0.2); }
+  100% { box-shadow: 0 0 16px rgba(245, 158, 11, 0.5); }
+}
+
+/* Quick Start / Fight Now Button */
+.btn-battle-action.ready {
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  border: 1px solid #f59e0b;
+  color: #ffffff;
+  font-weight: 800;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.4);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.btn-battle-action.ready:hover {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.7);
+}
+
+/* Top Center Tactical Placement Details Banner */
+.arena-prep-top-banner {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  pointer-events: none;
+  transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.arena-prep-top-banner.is-hidden {
+  opacity: 0;
+  transform: translate(-50%, -18px);
+  pointer-events: none;
+}
+
+.prep-top-content {
+  background: rgba(10, 15, 29, 0.92);
+  backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(245, 158, 11, 0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75), 0 0 16px rgba(245, 158, 11, 0.2);
+  border-radius: 30px;
+  padding: 0.42rem 1.3rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  white-space: nowrap;
+}
+
+.prep-top-icon {
+  font-size: 0.95rem;
+}
+
+.prep-top-title {
+  font-family: var(--font-heading);
+  font-size: 0.86rem;
+  font-weight: 900;
+  color: #f59e0b;
+  letter-spacing: 0.08em;
+}
+
+.prep-top-divider {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.8rem;
+}
+
+.prep-top-sub {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+}
+
+/* Center Screen Countdown Number ONLY */
+.arena-prep-center-countdown {
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 35;
+  pointer-events: none;
+  transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.arena-prep-center-countdown.is-hidden {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.65);
+  pointer-events: none;
+}
+
+.center-countdown-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 104px;
+  min-height: 104px;
+  background: radial-gradient(circle, rgba(15, 23, 42, 0.88) 0%, rgba(7, 10, 18, 0.75) 70%, transparent 100%);
+  border: 2px solid rgba(245, 158, 11, 0.55);
+  border-radius: 50%;
+  padding: 0.7rem;
+  box-shadow: 0 0 36px rgba(0, 0, 0, 0.85), 0 0 24px rgba(245, 158, 11, 0.35);
+  animation: centerTimerPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes centerTimerPulse {
+  0% { transform: scale(1); box-shadow: 0 0 20px rgba(245, 158, 11, 0.25); }
+  100% { transform: scale(1.05); box-shadow: 0 0 36px rgba(245, 158, 11, 0.5); }
+}
+
+.center-countdown-num {
+  font-family: var(--font-heading);
+  font-size: 3.2rem;
+  font-weight: 900;
+  color: #f59e0b;
+  line-height: 1;
+  text-shadow: 0 0 20px rgba(245, 158, 11, 0.8), 0 2px 6px rgba(0, 0, 0, 0.95);
+}
+
+.center-countdown-num.critical {
+  color: #ff334b;
+  text-shadow: 0 0 26px rgba(255, 51, 75, 0.95);
+  animation: prepTimerShake 0.4s ease infinite;
+}
+
+@keyframes prepTimerShake {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+
+.center-countdown-sec {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #f59e0b;
+  letter-spacing: 0.1em;
+  margin-top: -3px;
+  opacity: 0.9;
+}
+
+/* Valid Cell Highlights During Placement Phase */
+.arena-cell-polygon.cell-placement-valid {
+  stroke: #00f0ff !important;
+  stroke-width: 2.5px !important;
+  fill: rgba(0, 240, 255, 0.22) !important;
+  filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.6));
+  cursor: pointer;
+}
+
+.arena-cell-polygon.cell-placement-hover {
+  stroke: #ffffff !important;
+  stroke-width: 3.5px !important;
+  fill: rgba(0, 240, 255, 0.45) !important;
+  filter: drop-shadow(0 0 18px #00f0ff);
+}
+
+/* Axie Repositioning State */
+.arena-board-axie.team-red.prep-draggable {
+  cursor: grab;
+}
+
+.arena-board-axie.team-red.prep-dragging {
+  cursor: grabbing !important;
+  opacity: 0.92;
+  z-index: 100 !important;
+  filter: drop-shadow(0 0 24px #00f0ff);
+}
+
+.arena-board-axie.is-positioning-selected {
+  filter: drop-shadow(0 0 20px #00f0ff) drop-shadow(0 0 6px #ffffff) !important;
+  transform: translate(-50%, -78%) scale(1.15) !important;
+  z-index: 80 !important;
+}
+
+.arena-board-axie.is-positioning-selected::after {
+  content: '';
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 64px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2.5px solid #00f0ff;
+  box-shadow: 0 0 14px #00f0ff, inset 0 0 8px #00f0ff;
+  animation: ringPulse 1.2s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes ringPulse {
+  0% { transform: translateX(-50%) scale(0.9); opacity: 0.7; }
+  100% { transform: translateX(-50%) scale(1.25); opacity: 1; }
+}
+
 /* Floating Action / Damage Numbers */
 .floating-dmg-text {
   position: absolute;

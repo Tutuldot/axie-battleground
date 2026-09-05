@@ -2187,6 +2187,10 @@ class AxieBattleGroundApp {
   private tacticalUnits: TacticalAxieUnit[] = [];
   private isTacticalBattleRunning: boolean = false;
   private currentTacticalRound: number = 1;
+  private isPreparationPhase: boolean = false;
+  private prepCountdownSeconds: number = 60;
+  private prepCountdownTimerId: any = null;
+  private selectedRedAxieIdForPositioning: string | null = null;
 
   // Calibrated Grid Perspective Geometry for Grounded 8x8 Arena (8 Rows x 8 Columns = 64 Cells)
   private readonly ARENA_GRID_Y_LINES = [
@@ -2295,11 +2299,21 @@ class AxieBattleGroundApp {
   private setupTrainingGround() {
     const btnExit = document.getElementById('btn-exit-training-ground');
     btnExit?.addEventListener('click', () => {
+      this.clearPreparationCountdown();
+      this.endPreparationPhase();
       this.isTacticalBattleRunning = false;
       audioManager.playUiClick();
       this.showPageView('dashboard');
       const tabBattle = document.getElementById('tab-btn-battle');
       tabBattle?.click();
+    });
+
+    const btnReady = document.getElementById('btn-battle-ready');
+    btnReady?.addEventListener('click', () => {
+      audioManager.playUiClick();
+      this.clearPreparationCountdown();
+      this.endPreparationPhase();
+      this.startTacticalBattle();
     });
 
     const btnStart = document.getElementById('btn-start-tactical-battle');
@@ -2312,6 +2326,8 @@ class AxieBattleGroundApp {
           btnStart.classList.remove('is-fighting');
         }
       } else {
+        this.clearPreparationCountdown();
+        this.endPreparationPhase();
         this.startTacticalBattle();
       }
     });
@@ -2347,6 +2363,315 @@ class AxieBattleGroundApp {
     this.renderTacticalBattleGrid();
     this.renderBoardSpineAxies();
     this.resizeArenaVfxCanvas();
+    this.startPreparationCountdown();
+  }
+
+  // --- 10-Second Tactical Preparation Phase & Repositioning ---
+
+  private startPreparationCountdown() {
+    this.clearPreparationCountdown();
+    this.isPreparationPhase = true;
+    this.prepCountdownSeconds = 60;
+    this.selectedRedAxieIdForPositioning = null;
+
+    const topBanner = document.getElementById('arena-prep-top-banner');
+    const centerCountdown = document.getElementById('arena-prep-center-countdown');
+    const bigTimer = document.getElementById('arena-prep-big-timer');
+    const topTitle = document.querySelector('.prep-top-title');
+    const badgeTimer = document.getElementById('arena-countdown-timer');
+    const badge = document.getElementById('arena-countdown-badge');
+    const btnReady = document.getElementById('btn-battle-ready');
+    const roundBadge = document.getElementById('battle-round-badge');
+    const readout = document.getElementById('arena-hover-cell-readout');
+
+    if (topBanner) topBanner.classList.remove('is-hidden');
+    if (centerCountdown) centerCountdown.classList.remove('is-hidden');
+    if (topTitle) topTitle.textContent = 'TACTICAL PLACEMENT PHASE';
+    if (bigTimer) {
+      bigTimer.textContent = '60';
+      bigTimer.classList.remove('critical');
+    }
+    if (badgeTimer) badgeTimer.textContent = '60s';
+    if (badge) badge.classList.remove('is-fighting');
+    if (btnReady) btnReady.style.display = 'inline-flex';
+    if (roundBadge) roundBadge.textContent = 'PREPARATION';
+    if (readout) readout.textContent = '🛡️ Prep Phase (60s): Drag or click Red Axies to reposition in Cols 1–2';
+
+    // Highlight Red Draggable Axies
+    this.tacticalUnits.forEach((unit) => {
+      if (unit.team === 'red' && unit.domElement) {
+        unit.domElement.classList.add('prep-draggable');
+      }
+    });
+
+    // 1-Second Timer Tick
+    this.prepCountdownTimerId = setInterval(() => {
+      this.prepCountdownSeconds--;
+
+      if (bigTimer) {
+        bigTimer.textContent = String(Math.max(0, this.prepCountdownSeconds));
+        if (this.prepCountdownSeconds <= 3) {
+          bigTimer.classList.add('critical');
+        }
+      }
+      if (badgeTimer) {
+        badgeTimer.textContent = `${Math.max(0, this.prepCountdownSeconds)}s`;
+      }
+
+      // Audible cues on countdown final seconds
+      if (this.prepCountdownSeconds > 0 && this.prepCountdownSeconds <= 3) {
+        audioManager.playUiTab();
+      }
+
+      if (this.prepCountdownSeconds <= 0) {
+        this.clearPreparationCountdown();
+        this.onPreparationTimerExpired();
+      }
+    }, 1000);
+  }
+
+  private clearPreparationCountdown() {
+    if (this.prepCountdownTimerId) {
+      clearInterval(this.prepCountdownTimerId);
+      this.prepCountdownTimerId = null;
+    }
+  }
+
+  private onPreparationTimerExpired() {
+    const bigTimer = document.getElementById('arena-prep-big-timer');
+    const topTitle = document.querySelector('.prep-top-title');
+    const readout = document.getElementById('arena-hover-cell-readout');
+
+    if (bigTimer) bigTimer.textContent = '0';
+    if (topTitle) topTitle.textContent = '⚔️ BATTLE START!';
+    if (readout) readout.textContent = '⚔️ Time is up! Battle starts now!';
+
+    audioManager.playBuffSfx('power_awaken');
+
+    setTimeout(() => {
+      this.endPreparationPhase();
+      this.startTacticalBattle();
+    }, 450);
+  }
+
+  private endPreparationPhase() {
+    this.isPreparationPhase = false;
+    this.clearPlacementSelection();
+
+    const topBanner = document.getElementById('arena-prep-top-banner');
+    const centerCountdown = document.getElementById('arena-prep-center-countdown');
+    if (topBanner) topBanner.classList.add('is-hidden');
+    if (centerCountdown) centerCountdown.classList.add('is-hidden');
+
+    const btnReady = document.getElementById('btn-battle-ready');
+    if (btnReady) btnReady.style.display = 'none';
+
+    this.tacticalUnits.forEach((unit) => {
+      if (unit.domElement) {
+        unit.domElement.classList.remove('prep-draggable', 'is-positioning-selected');
+      }
+    });
+
+    document.querySelectorAll('.arena-cell-polygon').forEach((el) => {
+      el.classList.remove('cell-placement-valid', 'cell-placement-hover');
+    });
+  }
+
+  private selectAxieForPlacement(unit: TacticalAxieUnit) {
+    if (unit.team !== 'red' || !this.isPreparationPhase) return;
+
+    this.clearPlacementSelection();
+    this.selectedRedAxieIdForPositioning = unit.id;
+    unit.domElement?.classList.add('is-positioning-selected');
+
+    // Highlight all 16 valid cells in Columns 1 & 2 (0-indexed 0 and 1)
+    document.querySelectorAll('.arena-cell-polygon').forEach((el) => {
+      const col = parseInt(el.getAttribute('data-col') || '0', 10);
+      if (col === 1 || col === 2) {
+        el.classList.add('cell-placement-valid');
+      }
+    });
+
+    const readout = document.getElementById('arena-hover-cell-readout');
+    if (readout) {
+      readout.textContent = `🎯 Selected #${unit.id} (${unit.class}). Click any cell in Cols 1–2 to move, or another Red Axie to swap.`;
+    }
+    audioManager.playUiClick();
+  }
+
+  private clearPlacementSelection() {
+    this.selectedRedAxieIdForPositioning = null;
+    document.querySelectorAll('.arena-board-axie').forEach((el) => {
+      el.classList.remove('is-positioning-selected');
+    });
+    document.querySelectorAll('.arena-cell-polygon').forEach((el) => {
+      el.classList.remove('cell-placement-valid', 'cell-placement-hover');
+    });
+  }
+
+  private moveAxieToCell(unit: TacticalAxieUnit, targetRow: number, targetCol: number) {
+    if (targetCol >= 2) {
+      const readout = document.getElementById('arena-hover-cell-readout');
+      if (readout) readout.textContent = '⚠️ Placement is restricted to the first 2 columns (Cols 1–2)!';
+      return;
+    }
+
+    // Check if another Red Axie already occupies target cell
+    const occupyingUnit = this.tacticalUnits.find(
+      (u) => u.team === 'red' && u.id !== unit.id && u.row === targetRow && u.col === targetCol
+    );
+
+    if (occupyingUnit) {
+      this.swapAxiePositions(unit, occupyingUnit);
+      return;
+    }
+
+    // Move to empty cell
+    unit.row = targetRow;
+    unit.col = targetCol;
+    unit.initialRow = targetRow;
+    unit.initialCol = targetCol;
+
+    const lineupEntry = this.BOARD_AXIES_LINEUP.find((a) => a.id === unit.id);
+    if (lineupEntry) {
+      lineupEntry.row = targetRow;
+      lineupEntry.col = targetCol;
+    }
+
+    const { leftPct, topPct } = this.getGridCellCenter(targetRow, targetCol);
+    if (unit.domElement) {
+      unit.domElement.style.left = `${leftPct.toFixed(2)}%`;
+      unit.domElement.style.top = `${topPct.toFixed(2)}%`;
+      unit.domElement.style.zIndex = `${15 + targetRow * 10}`;
+    }
+
+    audioManager.playUiEquip();
+    const readout = document.getElementById('arena-hover-cell-readout');
+    if (readout) {
+      readout.textContent = `✅ Moved Axie #${unit.id} to [R${targetRow + 1}-C${targetCol + 1}]`;
+    }
+    this.clearPlacementSelection();
+  }
+
+  private swapAxiePositions(unitA: TacticalAxieUnit, unitB: TacticalAxieUnit) {
+    const tempRow = unitA.row;
+    const tempCol = unitA.col;
+
+    unitA.row = unitB.row;
+    unitA.col = unitB.col;
+    unitA.initialRow = unitB.row;
+    unitA.initialCol = unitB.col;
+
+    unitB.row = tempRow;
+    unitB.col = tempCol;
+    unitB.initialRow = tempRow;
+    unitB.initialCol = tempCol;
+
+    const lineupA = this.BOARD_AXIES_LINEUP.find((a) => a.id === unitA.id);
+    if (lineupA) {
+      lineupA.row = unitA.row;
+      lineupA.col = unitA.col;
+    }
+    const lineupB = this.BOARD_AXIES_LINEUP.find((a) => a.id === unitB.id);
+    if (lineupB) {
+      lineupB.row = unitB.row;
+      lineupB.col = unitB.col;
+    }
+
+    const posA = this.getGridCellCenter(unitA.row, unitA.col);
+    if (unitA.domElement) {
+      unitA.domElement.style.left = `${posA.leftPct.toFixed(2)}%`;
+      unitA.domElement.style.top = `${posA.topPct.toFixed(2)}%`;
+      unitA.domElement.style.zIndex = `${15 + unitA.row * 10}`;
+    }
+
+    const posB = this.getGridCellCenter(unitB.row, unitB.col);
+    if (unitB.domElement) {
+      unitB.domElement.style.left = `${posB.leftPct.toFixed(2)}%`;
+      unitB.domElement.style.top = `${posB.topPct.toFixed(2)}%`;
+      unitB.domElement.style.zIndex = `${15 + unitB.row * 10}`;
+    }
+
+    audioManager.playUiEquip();
+    const readout = document.getElementById('arena-hover-cell-readout');
+    if (readout) {
+      readout.textContent = `🔄 Swapped Axie #${unitA.id} and Axie #${unitB.id}`;
+    }
+    this.clearPlacementSelection();
+  }
+
+  private setupAxieDragAndDrop(unit: TacticalAxieUnit, unitEl: HTMLElement) {
+    let startX = 0;
+    let startY = 0;
+    let isDragging = false;
+    let hasMoved = false;
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (!this.isPreparationPhase || unit.team !== 'red' || e.button !== 0) return;
+      startX = e.clientX;
+      startY = e.clientY;
+      isDragging = true;
+      hasMoved = false;
+
+      this.selectAxieForPlacement(unit);
+
+      const onPointerMove = (moveEvt: PointerEvent) => {
+        if (!isDragging) return;
+        const dx = moveEvt.clientX - startX;
+        const dy = moveEvt.clientY - startY;
+
+        if (Math.hypot(dx, dy) > 8) {
+          hasMoved = true;
+          unitEl.classList.add('prep-dragging');
+
+          const elem = document.elementFromPoint(moveEvt.clientX, moveEvt.clientY);
+          const cellPolygon = elem?.closest('.arena-cell-polygon') as SVGPolygonElement | null;
+
+          document.querySelectorAll('.arena-cell-polygon').forEach((p) => p.classList.remove('cell-placement-hover'));
+          if (cellPolygon) {
+            const col = parseInt(cellPolygon.getAttribute('data-col') || '0', 10);
+            if (col === 1 || col === 2) {
+              cellPolygon.classList.add('cell-placement-hover');
+            }
+          }
+        }
+      };
+
+      const onPointerUp = (upEvt: PointerEvent) => {
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+
+        if (!isDragging) return;
+        isDragging = false;
+        unitEl.classList.remove('prep-dragging');
+        document.querySelectorAll('.arena-cell-polygon').forEach((p) => p.classList.remove('cell-placement-hover'));
+
+        if (hasMoved) {
+          const elem = document.elementFromPoint(upEvt.clientX, upEvt.clientY);
+          const cellPolygon = elem?.closest('.arena-cell-polygon') as SVGPolygonElement | null;
+          if (cellPolygon) {
+            const row = parseInt(cellPolygon.getAttribute('data-row') || '0', 10) - 1;
+            const col = parseInt(cellPolygon.getAttribute('data-col') || '0', 10) - 1;
+            if (col < 2) {
+              this.moveAxieToCell(unit, row, col);
+              return;
+            } else {
+              const readout = document.getElementById('arena-hover-cell-readout');
+              if (readout) readout.textContent = '⚠️ Placement restricted to Columns 1–2!';
+            }
+          }
+          // Snap back if dropped invalidly
+          const origPos = this.getGridCellCenter(unit.row, unit.col);
+          unitEl.style.left = `${origPos.leftPct.toFixed(2)}%`;
+          unitEl.style.top = `${origPos.topPct.toFixed(2)}%`;
+        }
+      };
+
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+    };
+
+    unitEl.addEventListener('pointerdown', onPointerDown);
   }
 
   private getGridCellCenter(row: number, col: number): { cx: number; cy: number; leftPct: number; topPct: number } {
@@ -2432,30 +2757,67 @@ class AxieBattleGroundApp {
         // Hover events
         polygon.addEventListener('mouseenter', () => {
           if (readout && !this.isTacticalBattleRunning) {
-            readout.textContent = `${zoneEmoji} ${zoneName}: [${cellId}]`;
+            if (this.isPreparationPhase && this.selectedRedAxieIdForPositioning) {
+              if (c < 2) {
+                polygon.classList.add('cell-placement-hover');
+                readout.textContent = `🎯 Move selected Axie #${this.selectedRedAxieIdForPositioning} to [${cellId}] (Col ${c + 1})`;
+              } else {
+                readout.textContent = `🚫 Cannot place at [${cellId}] (Red placement restricted to Columns 1 & 2)`;
+              }
+            } else if (this.isPreparationPhase) {
+              readout.textContent = `${zoneEmoji} ${zoneName}: [${cellId}] (Drag or click Red Axies to place in Cols 1–2)`;
+            } else {
+              readout.textContent = `${zoneEmoji} ${zoneName}: [${cellId}]`;
+            }
           }
         });
 
         polygon.addEventListener('mouseleave', () => {
+          polygon.classList.remove('cell-placement-hover');
           if (readout && !this.isTacticalBattleRunning) {
-            if (this.selectedCellId) {
+            if (this.isPreparationPhase && this.selectedRedAxieIdForPositioning) {
+              readout.textContent = `🎯 Axie #${this.selectedRedAxieIdForPositioning} selected — Click any cell in Cols 1–2 to place`;
+            } else if (this.isPreparationPhase) {
+              readout.textContent = '🛡️ Prep Phase: Drag or click Red Axies to reposition within Cols 1–2';
+            } else if (this.selectedCellId) {
               const selectedEl = document.querySelector(`[data-cell-id="${this.selectedCellId}"]`);
               const selZone = selectedEl?.getAttribute('data-zone');
               const selEmoji = selZone === 'red' ? '🔴' : selZone === 'blue' ? '🔵' : '⚔️';
               readout.textContent = `Selected: ${selEmoji} [${this.selectedCellId}]`;
             } else {
-              readout.textContent = 'Click START BATTLE to begin!';
+              readout.textContent = 'Real-time tactical combat arena';
             }
           }
         });
 
-        // Click selection
+        // Click selection & placement
         polygon.addEventListener('click', () => {
           if (this.isTacticalBattleRunning) return;
+
+          // If in preparation phase and a Red Axie is currently selected for moving:
+          if (this.isPreparationPhase && this.selectedRedAxieIdForPositioning) {
+            const selectedUnit = this.tacticalUnits.find(
+              (u) => u.id === this.selectedRedAxieIdForPositioning && u.team === 'red'
+            );
+            if (selectedUnit) {
+              if (c < 2) {
+                this.moveAxieToCell(selectedUnit, r, c);
+                return;
+              } else {
+                const readout = document.getElementById('arena-hover-cell-readout');
+                if (readout) {
+                  readout.textContent = '⚠️ Placement restricted: Red Axies can only be placed in Columns 1 & 2!';
+                }
+                audioManager.playUiTab();
+                return;
+              }
+            }
+          }
+
           document.querySelectorAll('.arena-cell-polygon').forEach((el) => el.classList.remove('is-selected'));
           if (this.selectedCellId === cellId) {
             this.selectedCellId = null;
-            if (readout) readout.textContent = 'Click START BATTLE to begin!';
+            if (readout) readout.textContent = this.isPreparationPhase ? 'Place Red Axies in Cols 1–2' : 'Real-time combat arena';
           } else {
             this.selectedCellId = cellId;
             polygon.classList.add('is-selected');
@@ -2585,6 +2947,34 @@ class AxieBattleGroundApp {
       unitEl.addEventListener('click', (e) => {
         e.stopPropagation();
         if (this.isTacticalBattleRunning) return;
+
+        // Interactive Placement Phase handling for Red units
+        if (this.isPreparationPhase && isRed) {
+          const currentUnit = this.tacticalUnits.find((u) => u.id === axie.id);
+          if (currentUnit) {
+            if (this.selectedRedAxieIdForPositioning) {
+              if (this.selectedRedAxieIdForPositioning === currentUnit.id) {
+                // Clicked same Axie -> deselect
+                this.clearPlacementSelection();
+                return;
+              } else {
+                // Clicked another Red Axie -> Swap positions!
+                const prevUnit = this.tacticalUnits.find(
+                  (u) => u.id === this.selectedRedAxieIdForPositioning
+                );
+                if (prevUnit) {
+                  this.swapAxiePositions(prevUnit, currentUnit);
+                  return;
+                }
+              }
+            } else {
+              // Select this Red Axie for positioning
+              this.selectAxieForPlacement(currentUnit);
+              return;
+            }
+          }
+        }
+
         document.querySelectorAll('.arena-board-axie').forEach((el) => el.classList.remove('is-selected'));
         unitEl.classList.add('is-selected');
         if (readout) {
@@ -2618,7 +3008,7 @@ class AxieBattleGroundApp {
       }
 
       // Add to tactical units list
-      this.tacticalUnits.push({
+      const newUnit: TacticalAxieUnit = {
         id: axie.id,
         name: axie.name,
         class: axie.class,
@@ -2642,7 +3032,13 @@ class AxieBattleGroundApp {
         spineEngine: spineEngine,
         domElement: unitEl,
         isDefeated: false,
-      });
+      };
+      this.tacticalUnits.push(newUnit);
+
+      // Connect drag-and-drop repositioning for Red squad
+      if (isRed) {
+        this.setupAxieDragAndDrop(newUnit, unitEl);
+      }
     });
   }
 
@@ -3178,6 +3574,8 @@ class AxieBattleGroundApp {
    */
   private async startTacticalBattle() {
     if (this.isTacticalBattleRunning) return;
+    this.clearPreparationCountdown();
+    this.endPreparationPhase();
     this.isTacticalBattleRunning = true;
 
     const startBtn = document.getElementById('btn-start-tactical-battle');
@@ -3186,7 +3584,15 @@ class AxieBattleGroundApp {
       startBtn.classList.add('is-fighting');
     }
 
-    // Play Origins Tactical Battle Theme
+    const badgeTimer = document.getElementById('arena-countdown-timer');
+    const badge = document.getElementById('arena-countdown-badge');
+    if (badge) badge.classList.add('is-fighting');
+    if (badgeTimer) badgeTimer.textContent = 'FIGHTING';
+
+    const btnReady = document.getElementById('btn-battle-ready');
+    if (btnReady) btnReady.style.display = 'none';
+
+    // Play Origins Tactical Battle Theme without interrupting volume
     audioManager.playBgm('pve_1');
 
     const readout = document.getElementById('arena-hover-cell-readout');
@@ -3218,8 +3624,11 @@ class AxieBattleGroundApp {
           startBtn.textContent = '⚔️ START BATTLE';
           startBtn.classList.remove('is-fighting');
         }
+        if (badge) badge.classList.remove('is-fighting');
+        if (badgeTimer) badgeTimer.textContent = 'ENDED';
+
         this.isTacticalBattleRunning = false;
-        audioManager.playSfx('power_awaken');
+        audioManager.playBuffSfx('power_awaken');
         break;
       }
 
@@ -3249,10 +3658,10 @@ class AxieBattleGroundApp {
     }
 
     const roundBadge = document.getElementById('battle-round-badge');
-    if (roundBadge) roundBadge.textContent = 'REAL-TIME AUTO BATTLE';
+    if (roundBadge) roundBadge.textContent = 'PREPARATION';
 
     const readout = document.getElementById('arena-hover-cell-readout');
-    if (readout) readout.textContent = 'Click START BATTLE to begin!';
+    if (readout) readout.textContent = '🛡️ Prep Phase (60s): Drag or click Red Axies to reposition in Cols 1–2';
 
     // Reset units to initial position, full HP, zero shield, and reset card queues
     this.tacticalUnits.forEach((unit) => {
@@ -3267,7 +3676,7 @@ class AxieBattleGroundApp {
       unit.isDefeated = false;
 
       if (unit.domElement) {
-        unit.domElement.classList.remove('is-defeated', 'is-attacking', 'is-defending', 'is-hit', 'is-running');
+        unit.domElement.classList.remove('is-defeated', 'is-attacking', 'is-defending', 'is-hit', 'is-running', 'is-positioning-selected');
         const { leftPct, topPct } = this.getGridCellCenter(unit.row, unit.col);
         unit.domElement.style.left = `${leftPct.toFixed(2)}%`;
         unit.domElement.style.top = `${topPct.toFixed(2)}%`;
@@ -3278,6 +3687,9 @@ class AxieBattleGroundApp {
 
       unit.spineEngine?.setAnimation('action/idle/normal', true);
     });
+
+    // Start fresh 10s preparation countdown
+    this.startPreparationCountdown();
   }
 
   private sleep(ms: number): Promise<void> {

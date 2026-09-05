@@ -1004,19 +1004,27 @@
 
         <div class="arena-hud-center">
           <div class="arena-battle-controls">
-            <button id="btn-start-tactical-battle" class="btn btn-sm btn-battle-action start">
+            <div id="arena-countdown-badge" class="battle-countdown-badge">
+              <span class="countdown-pulse-icon">⏱️</span>
+              <span class="countdown-label">PREP:</span>
+              <strong id="arena-countdown-timer">60s</strong>
+            </div>
+            <button id="btn-battle-ready" class="btn btn-sm btn-battle-action ready" title="Start battle immediately without waiting">
+              ⚡ FIGHT NOW
+            </button>
+            <button id="btn-start-tactical-battle" class="btn btn-sm btn-battle-action start" style="display: none;">
               ⚔️ START BATTLE
             </button>
             <button id="btn-reset-tactical-battle" class="btn btn-sm btn-battle-action reset">
               🔄 RESET
             </button>
-            <div id="battle-round-badge" class="battle-round-badge">ROUND 1</div>
+            <div id="battle-round-badge" class="battle-round-badge">PREPARATION</div>
           </div>
         </div>
 
         <div class="arena-hud-right">
           <div class="arena-quick-toggles">
-            <span id="arena-hover-cell-readout" class="arena-cell-readout">Click START BATTLE to begin!</span>
+            <span id="arena-hover-cell-readout" class="arena-cell-readout">Place Red Axies in Cols 1–2</span>
           </div>
         </div>
       </header>
@@ -1027,6 +1035,24 @@
           <div class="arena-board-aspect-box">
             <!-- Background Image -->
             <img class="arena-bg-img" src="/arena-bg-8x8.jpg" alt="Axie Battleground Arena" />
+
+            <!-- Top Center Tactical Placement Details Banner -->
+            <div id="arena-prep-top-banner" class="arena-prep-top-banner">
+              <div class="prep-top-content">
+                <span class="prep-top-icon">🛡️</span>
+                <span class="prep-top-title">TACTICAL PLACEMENT PHASE</span>
+                <span class="prep-top-divider">•</span>
+                <span class="prep-top-sub">Drag or click to reposition your <strong style="color: #ff6b6b;">Red Squad</strong> within Columns 1–2</span>
+              </div>
+            </div>
+
+            <!-- Center Countdown Number ONLY -->
+            <div id="arena-prep-center-countdown" class="arena-prep-center-countdown">
+              <div class="center-countdown-box">
+                <span class="center-countdown-num" id="arena-prep-big-timer">60</span>
+                <span class="center-countdown-sec">SEC</span>
+              </div>
+            </div>
 
             <!-- SVG Grid Overlay with exact 1024x576 viewBox -->
             <svg id="arena-grid-svg" class="arena-grid-svg" viewBox="0 0 1024 576" preserveAspectRatio="none">

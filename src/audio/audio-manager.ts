@@ -195,12 +195,24 @@ export class AudioManager {
 
   // --- Sound Effects (SFX) Playback ---
 
+  // Dedicated softened scale for ability/battle sound effects (avoids ducking background music)
+  private abilitySfxMultiplier: number = 0.35;
+  private lastSfxTimeMap: Map<string, number> = new Map();
+
   public playSfx(sfxName: string, volumeScale: number = 1.0): void {
     if (this.isSfxMuted || this.sfxVolume <= 0) return;
 
     try {
       const cleanName = sfxName.replace(/\.wav$/, '');
       const src = `/audio/sfx/${cleanName}.wav`;
+
+      // Throttle identical SFX within 50ms to prevent sound distortion and mixer overload
+      const now = performance.now();
+      const lastPlayed = this.lastSfxTimeMap.get(cleanName) || 0;
+      if (now - lastPlayed < 50) {
+        return;
+      }
+      this.lastSfxTimeMap.set(cleanName, now);
 
       let audio = this.sfxCache.get(cleanName);
       if (!audio) {
@@ -211,15 +223,21 @@ export class AudioManager {
         audio = audio.cloneNode() as HTMLAudioElement;
       }
 
-      const effectiveVolume = Math.min(1, Math.max(0, this.sfxVolume * volumeScale));
+      // Gentle volume ceiling: sound effects will never overpower BGM or trigger OS audio ducking
+      const effectiveVolume = Math.min(0.40, Math.max(0, this.sfxVolume * volumeScale));
       audio.volume = effectiveVolume;
       audio.play().catch(() => {});
+
+      // Keep background music playing at its intended volume without disruption
+      if (this.bgmAudio && !this.isBgmMuted && this.bgmAudio.volume !== this.bgmVolume) {
+        this.bgmAudio.volume = this.bgmVolume;
+      }
     } catch (err) {
       // Ignored
     }
   }
 
-  public playSkillSfx(vfxId: string, phase: 'attack' | 'fly' | 'hit', volumeScale: number = 1.0): void {
+  public playSkillSfx(vfxId: string, phase: 'attack' | 'fly' | 'hit', volumeScale: number = 0.32): void {
     const candidate = `${vfxId}_${phase}`;
     if (this.availableSfxNames.size === 0 || this.availableSfxNames.has(candidate)) {
       this.playSfx(candidate, volumeScale);
@@ -240,7 +258,7 @@ export class AudioManager {
     }
   }
 
-  public playBuffSfx(buffId: string, volumeScale: number = 1.0): void {
+  public playBuffSfx(buffId: string, volumeScale: number = 0.28): void {
     const cleanBuff = buffId.replace(/[-_]apply$/, '').replace(/[-_]boost$/, '');
     this.playSfx(cleanBuff, volumeScale);
   }

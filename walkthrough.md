@@ -1,35 +1,40 @@
-# Tactical Grid Auto-Battle: Simultaneous Combat, Multi-Step Running & Melee Row Alignment
+# Battle System Update: 10s Tactical Countdown, Axie Repositioning & Audio Balance
 
-Updated the tactical auto-battle engine with simultaneous action execution for all units, 3-step continuous Spine running animation without jumping hops, and strict side-by-side same-row melee positioning.
-
----
-
-## ⚡ 1. Simultaneous Action Execution (All Units Act Together)
-- **Simultaneous Action Planning**: At the start of each round, all living Red and Blue units evaluate the battlefield concurrently.
-- **Simultaneous Movement Phase**: All units requiring movement start running across cells at the exact same time (`Promise.all(movingUnits.map(...))`).
-- **Simultaneous Combat Phase**: All units in range cast abilities, launch projectiles, or lunge into melee simultaneously (`Promise.all(attackingUnits.map(...))`), updating damage numbers and HP bars concurrently.
+Updated the battle system to remove the manual start button requirement, added an interactive **10-Second Tactical Preparation Countdown** allowing the player to freely reposition their Red squad within the first 2 columns, and balanced the audio mix so background music plays continuously without cutting while ability sound effects play at a softened volume.
 
 ---
 
-## 🏃 2. Continuous 3-Step Running Animation (No Hopping)
-- **Spine `action/run` Animation**: Units utilize the official continuous 2D Spine running cycle featuring rapid leg/body stride cadence.
-- **Smooth Glide**: Replaced vertical bouncing hops with dynamic forward leaning (`transform: skewX(-3.5deg)` for Red, `skewX(3.5deg)` for Blue) and linear grid translation over 850ms.
+## ⚡ Key Updates
+
+### 1. Automatic Battle Start with 10-Second Countdown
+- **No Manual Click Required**: Entering the Tactical Battleground screen (or pressing `🔄 RESET`) automatically kicks off a **10-second tactical preparation phase**.
+- **Live Countdown Displays**:
+  - **Header Countdown Badge**: Shows `⏱️ PREP: 10s` with a pulsing neon gold/amber indicator.
+  - **Floating Tactical Prep Banner**: Positioned above the arena board displaying the live countdown (`10` -> `0`) and guidance instructions: *"Drag or click to reposition your Red Squad within Columns 1–2"*.
+- **Auto-Combat Transition**: When the timer reaches 0s, the banner flashes `⚔️ BATTLE START!`, fades out, and real-time auto-chess combat begins automatically from the Axies' chosen positions.
+- **`⚡ FIGHT NOW` Early Skip**: An optional button allows players who finish repositioning quickly to begin combat immediately without waiting for the timer to expire.
 
 ---
 
-## ⚔️ 3. Strict Same-Row Side-by-Side Melee Positioning
-- **Melee Condition**: Melee abilities (`1-Cell Melee`) can only strike when an attacker is directly beside its target on the **same row** (`target.row === attacker.row && |target.col - attacker.col| === 1`).
-- **Row Alignment Shift**: If the target is on a different row, the attacker automatically shifts row first to align horizontally before closing the gap.
-- **Melee Strike Lunge**: When attacking, units quickly lunge into the target's cell boundary (`is-lunge-right` / `is-lunge-left`) before snapping back to their cell center.
+### 2. Interactive Red Axie Repositioning (Columns 1 & 2)
+- **Restricted to Player's Side (Columns 1 & 2)**: Players can place any of their 4 Red Axies anywhere among the 16 cells in Column 1 and Column 2 (Rows 1–8).
+- **Click-to-Move & Click-to-Swap**:
+  - Clicking any Red Axie selects it, displaying a glowing cyan circular halo and highlighting the valid cells in Columns 1 & 2.
+  - Clicking an open cell in Columns 1–2 smoothly repositions the Axie there with a crisp placement SFX.
+  - Clicking another Red Axie immediately swaps their positions on the board.
+  - Attempting to place an Axie outside Columns 1–2 displays a warning feedback message in the readout.
+- **Drag-and-Drop**:
+  - Players can also drag Red Axies directly onto target cells during the 10-second countdown with live cell hover highlights.
 
 ---
 
-## 🎯 4. Class Aggression Targeting
-- **Bird, Aqua, Dawn** &rarr; Hunt **Bug, Mech, Beast**
-- **Bug, Mech, Beast** &rarr; Hunt **Dusk, Plant, Reptile**
-- **Dusk, Plant, Reptile** &rarr; Hunt **Bird, Dawn, Aqua**
-- **HP Formula**: `HP = HP stat * 300`
+### 3. Audio Balancing & Uninterrupted Background Music
+- **No Background Volume Cutting**: Background music volume is preserved continuously at its steady level throughout all battle actions.
+- **Softened Ability Sound Effects**:
+  - Ability SFX (attacks, projectile throws, hits, and buffs) play at a softened volume scale (`~0.28–0.32`).
+  - Added duplicate sound effect throttling (50ms window) and gentle output volume capping (`0.40 max`) in `src/audio/audio-manager.ts` to prevent browser and OS dynamic range compression limiters from ducking or cutting out the background music.
 
+---
 
-
-
+### 4. Real-Time Combat Flow
+- Once the countdown ends (or upon clicking `⚡ FIGHT NOW`), the units immediately engage in real-time independent auto-chess combat from their new coordinates.
